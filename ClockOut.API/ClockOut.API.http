@@ -1,0 +1,6 @@
+@ClockOut.API_HostAddress = http://localhost:5278
+
+GET {{ClockOut.API_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
