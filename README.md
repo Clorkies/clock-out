@@ -90,7 +90,7 @@ clock-out/
         └── components/    # NavBar, LogCard, HoursGauge
 ```
 
----
+<!-- ---
 
 ## Local Setup
 
@@ -147,7 +147,7 @@ Run the frontend:
 
 ```bash
 npm run dev
-```
+``` -->
 
 <!-- 
 ## Deployment
