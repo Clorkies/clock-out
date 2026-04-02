@@ -1,52 +1,89 @@
-# ClockOut
+<h1 align="center">ClockOut</h1>
 
-> A full-stack web app for Filipino OJT students to log daily hours, track progress toward their required 300 hours, and never lose count of how close they are to finally being done.
+<p align="center">
+  Track OJT hours smarter. Hit your required <strong>300 hours</strong> faster.
+</p>
 
-**Live Demo:** [clockout.vercel.app](https://your-app.vercel.app) &nbsp;·&nbsp; **API:** [clockout-api.railway.app/swagger](https://your-api.railway.app/swagger)
+<p align="center">
+  <img src="https://img.shields.io/badge/.NET-8-512BD4?style=for-the-badge&logo=dotnet" alt=".NET 8 Badge" />
+  <img src="https://img.shields.io/badge/ASP.NET_Core-Web_API-5C2D91?style=for-the-badge&logo=dotnet" alt="ASP.NET Core Badge" />
+  <img src="https://img.shields.io/badge/React-Frontend-61DAFB?style=for-the-badge&logo=react&logoColor=000" alt="React Badge" />
+  <img src="https://img.shields.io/badge/PostgreSQL-Database-336791?style=for-the-badge&logo=postgresql" alt="PostgreSQL Badge" />
+</p>
+
+<p align="center">
+  <img src="https://img.shields.io/badge/Auth-JWT-0F172A?style=for-the-badge&logo=jsonwebtokens" alt="JWT Badge" />
+  <img src="https://img.shields.io/badge/Deploy-Railway-0B0D0E?style=for-the-badge&logo=railway" alt="Railway Badge" />
+  <img src="https://img.shields.io/badge/Deploy-Vercel-000000?style=for-the-badge&logo=vercel" alt="Vercel Badge" />
+</p>
+
+> A full-stack web app for Filipino OJT students to log daily rendered hours, monitor progress, and stay on track toward graduation requirements.
+<!-- 
+**Live Demo:** [clockout.vercel.app](https://your-app.vercel.app) &nbsp;·&nbsp; **API:** [clockout-api.railway.app/swagger](https://your-api.railway.app/swagger) -->
 
 ---
 
-## Tech Stack
+## Overview
 
-**Backend**
-- C# / ASP.NET Core 8 Web API
-- Entity Framework Core 8
-- PostgreSQL
-- JWT Bearer Authentication
-
-**Frontend**
-- React.js + Vite
-- Tailwind CSS
-- Axios
-
-**Deployment**
-- Railway — API + PostgreSQL
-- Vercel — React frontend
+**ClockOut** helps students avoid manual hour tracking by centralizing daily logs, summaries, and progress analytics in one clean dashboard.
 
 ---
 
 ## Features
 
-- Register and log in securely with JWT authentication
-- Log daily OJT hours with task description, date, and supervisor name
-- Dashboard showing total hours rendered, remaining hours, and percentage complete
-- Full log history with edit and delete
-- Progress gauge counting down to 300 hours
+- 🔐 Secure account registration and login with JWT authentication
+- 📝 Daily OJT log entries with task description, date, and supervisor name
+- 📊 Dashboard with total rendered hours, remaining hours, and completion percentage
+- 🗂️ Full log history with edit and delete capabilities
+- 🎯 Progress gauge toward the 300-hour requirement
+
+---
+
+## Tech Stack
+
+### Backend
+- C# / ASP.NET Core 8 Web API
+- Entity Framework Core 8
+- PostgreSQL
+- JWT Bearer Authentication
+
+### Frontend
+- React + Vite
+- Tailwind CSS
+- Axios
+
+### Deployment
+- Railway (API + PostgreSQL)
+- Vercel (React frontend)
+
+---
+
+## API Endpoints
+
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| POST | `/api/auth/register` | — | Create a new account |
+| POST | `/api/auth/login` | — | Return a JWT token |
+| GET | `/api/logs` | ✅ | Get all logs for current user |
+| POST | `/api/logs` | ✅ | Create a new log entry |
+| PUT | `/api/logs/{id}` | ✅ | Update a log entry |
+| DELETE | `/api/logs/{id}` | ✅ | Delete a log entry |
+| GET | `/api/logs/summary` | ✅ | Get totals, remaining hours, and completion percent |
 
 ---
 
 ## Project Structure
 
-```
+```text
 clock-out/
-├── ClockOut.API/          # ASP.NET Core 8 Web API
-│   ├── Controllers/       # Auth and Logs endpoints
+├── ClockOut.API/          # ASP.NET Core Web API
+│   ├── Controllers/       # Auth + Logs endpoints
 │   ├── Models/            # User, LogEntry
-│   ├── DTOs/              # Request and response records
+│   ├── DTOs/              # Requests and responses
 │   ├── Data/              # AppDbContext
 │   ├── Services/          # Business logic
-│   └── Program.cs         # App setup and middleware
-└── client/                # React + Vite frontend
+│   └── Program.cs         # Middleware and service setup
+└── client/                # React frontend
     └── src/
         ├── lib/           # Axios instance
         ├── pages/         # Login, Register, Dashboard, Logs
@@ -61,17 +98,15 @@ clock-out/
 
 - [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8)
 - [Node.js 18+](https://nodejs.org)
-- [PostgreSQL](https://www.postgresql.org/download) (or use the Railway instance)
+- [PostgreSQL](https://www.postgresql.org/download)
 
----
-
-### Backend
+### 1) Backend Setup
 
 ```bash
 cd ClockOut.API
 ```
 
-Create `appsettings.Development.json` in the project root (this file is gitignored):
+Create `appsettings.Development.json` (gitignored):
 
 ```json
 {
@@ -86,54 +121,35 @@ Create `appsettings.Development.json` in the project root (this file is gitignor
 }
 ```
 
-Run migrations and start the server:
+Run database migrations and start the API:
 
 ```bash
 dotnet ef database update
 dotnet run
 ```
 
-Swagger UI is available at `https://localhost:5001/swagger`.
+Swagger UI: `https://localhost:5001/swagger`
 
----
-
-### Frontend
+### 2) Frontend Setup
 
 ```bash
 cd client
 npm install
 ```
 
-Create a `.env` file in the `client/` folder:
+Create `.env` in `client/`:
 
 ```env
 VITE_API_URL=https://localhost:5001
 ```
 
-Start the dev server:
+Run the frontend:
 
 ```bash
 npm run dev
 ```
 
-App runs at `http://localhost:5173`.
-
----
-
-## API Endpoints
-
-| Method | Endpoint | Auth | Description |
-|--------|----------|------|-------------|
-| POST | `/api/auth/register` | — | Create a new account |
-| POST | `/api/auth/login` | — | Returns JWT token |
-| GET | `/api/logs` | ✅ | Get all logs for current user |
-| POST | `/api/logs` | ✅ | Create a new log entry |
-| PUT | `/api/logs/{id}` | ✅ | Update a log entry |
-| DELETE | `/api/logs/{id}` | ✅ | Delete a log entry |
-| GET | `/api/logs/summary` | ✅ | Get total hours, remaining, and percentage |
-
----
-
+<!-- 
 ## Deployment
 
 ### Backend — Railway
@@ -155,16 +171,8 @@ Jwt__Audience                          =  clockout-client
 
 1. New Project → Import from GitHub → select `clock-out`
 2. Set root directory to `client`
-3. Set environment variable:
+3. Set environment variable: -->
 
 ```
 VITE_API_URL  =  https://your-api.railway.app
 ```
-
----
-
-## Author
-
-**Clorkies** — [@Clorkies](https://github.com/Clorkies)
-
-Built as part of a 300-hour OJT application for [Full Scale](https://fullscale.io).
