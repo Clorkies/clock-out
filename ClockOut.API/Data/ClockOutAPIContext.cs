@@ -15,5 +15,6 @@ namespace ClockOut.API.Data
         }
 
         public DbSet<ClockOut.API.Models.LogEntry> LogEntry { get; set; } = default!;
+        public DbSet<ClockOut.API.Models.User> User { get; set; } = default!;
     }
 }
