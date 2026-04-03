@@ -1,6 +1,143 @@
-@ClockOut.API_HostAddress = http://localhost:5278
+@host = http://localhost:5278
+@contentType = application/json
 
-GET {{ClockOut.API_HostAddress}}/weatherforecast/
+### Health check / root test
+GET {{host}}/
+Accept: application/json
+
+### ------------------------------------------------------------
+### USERS (current scaffolded endpoints)
+### ------------------------------------------------------------
+
+### Get all users
+GET {{host}}/api/Users
 Accept: application/json
 
 ###
+
+### Get one user by id
+@userId = 1
+GET {{host}}/api/Users/{{userId}}
+Accept: application/json
+
+###
+
+### Create a user
+POST {{host}}/api/Users
+Content-Type: {{contentType}}
+
+{
+  "email": "student1@example.com",
+  "passwordHash": "replace-with-real-hash-if-you-keep-current-model",
+  "firstName": "Juan",
+  "lastName": "Dela Cruz",
+  "requiredHours": 300
+}
+
+###
+
+### Update user by id
+PUT {{host}}/api/Users/{{userId}}
+Content-Type: {{contentType}}
+
+{
+  "id": {{userId}},
+  "email": "student1+updated@example.com",
+  "passwordHash": "replace-with-real-hash-if-you-keep-current-model",
+  "firstName": "Juan",
+  "lastName": "Dela Cruz",
+  "requiredHours": 400
+}
+
+###
+
+### Delete user by id
+DELETE {{host}}/api/Users/{{userId}}
+Accept: application/json
+
+### ------------------------------------------------------------
+### LOG ENTRIES (current scaffolded endpoints)
+### ------------------------------------------------------------
+
+### Get all log entries
+GET {{host}}/api/LogEntries
+Accept: application/json
+
+###
+
+### Get one log entry by id
+@logEntryId = 1
+GET {{host}}/api/LogEntries/{{logEntryId}}
+Accept: application/json
+
+###
+
+### Create a log entry
+POST {{host}}/api/LogEntries
+Content-Type: {{contentType}}
+
+{
+  "userId": 1,
+  "date": "2026-04-03",
+  "hoursRendered": 8,
+  "taskDescription": "Built API endpoint tests",
+  "supervisorName": "Mr. Santos"
+}
+
+###
+
+### Update a log entry by id
+PUT {{host}}/api/LogEntries/{{logEntryId}}
+Content-Type: {{contentType}}
+
+{
+  "id": {{logEntryId}},
+  "userId": 1,
+  "date": "2026-04-03",
+  "hoursRendered": 7.5,
+  "taskDescription": "Updated OJT logs and docs",
+  "supervisorName": "Mr. Santos"
+}
+
+###
+
+### Delete a log entry by id
+DELETE {{host}}/api/LogEntries/{{logEntryId}}
+Accept: application/json
+
+### ------------------------------------------------------------
+### AUTH (for when /api/auth endpoints are implemented)
+### ------------------------------------------------------------
+
+### Register (expected future endpoint)
+POST {{host}}/api/auth/register
+Content-Type: {{contentType}}
+
+{
+  "email": "student2@example.com",
+  "password": "StrongPass123!",
+  "firstName": "Maria",
+  "lastName": "Santos"
+}
+
+###
+
+### Login (expected future endpoint)
+# Optional token capture snippet for REST Client:
+# > {%
+# client.global.set("jwt", response.body.token);
+# %}
+POST {{host}}/api/auth/login
+Content-Type: {{contentType}}
+
+{
+  "email": "student2@example.com",
+  "password": "StrongPass123!"
+}
+
+###
+
+### Example authorized request (expected future protected route)
+GET {{host}}/api/logs
+Authorization: Bearer {{jwt}}
+Accept: application/json
