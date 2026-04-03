@@ -6,93 +6,96 @@ GET {{host}}/
 Accept: application/json
 
 ### ------------------------------------------------------------
-### USERS (current scaffolded endpoints)
+### AUTH
 ### ------------------------------------------------------------
 
-### Get all users
-GET {{host}}/api/Users
-Accept: application/json
-
-###
-
-### Get one user by id
-@userId = 1
-GET {{host}}/api/Users/{{userId}}
-Accept: application/json
-
-###
-
-### Create a user
-POST {{host}}/api/Users
+### Register (returns access token + user)
+POST {{host}}/api/auth/register
 Content-Type: {{contentType}}
 
 {
   "email": "student1@example.com",
-  "passwordHash": "replace-with-real-hash-if-you-keep-current-model",
+  "password": "StrongPass123!",
+  "firstName": "Juan",
+  "lastName": "Dela Cruz"
+}
+
+###
+
+### Login
+# Captures JWT for later requests.
+> {%
+client.global.set("jwt", response.body.accessToken);
+%}
+POST {{host}}/api/auth/login
+Content-Type: {{contentType}}
+
+{
+  "email": "student1@example.com",
+  "password": "StrongPass123!"
+}
+
+### ------------------------------------------------------------
+### ME (authenticated profile)
+### ------------------------------------------------------------
+
+### Get my profile
+GET {{host}}/api/me
+Authorization: Bearer {{jwt}}
+Accept: application/json
+
+###
+
+### Update my profile
+PUT {{host}}/api/me
+Authorization: Bearer {{jwt}}
+Content-Type: {{contentType}}
+
+{
   "firstName": "Juan",
   "lastName": "Dela Cruz",
   "requiredHours": 300
 }
 
-###
-
-### Update user by id
-PUT {{host}}/api/Users/{{userId}}
-Content-Type: {{contentType}}
-
-{
-  "id": {{userId}},
-  "email": "student1+updated@example.com",
-  "passwordHash": "replace-with-real-hash-if-you-keep-current-model",
-  "firstName": "Juan",
-  "lastName": "Dela Cruz",
-  "requiredHours": 400
-}
-
-###
-
-### Delete user by id
-DELETE {{host}}/api/Users/{{userId}}
-Accept: application/json
-
 ### ------------------------------------------------------------
-### LOG ENTRIES (current scaffolded endpoints)
+### LOGS (authenticated, user-scoped)
 ### ------------------------------------------------------------
 
-### Get all log entries
-GET {{host}}/api/LogEntries
-Accept: application/json
-
-###
-
-### Get one log entry by id
-@logEntryId = 1
-GET {{host}}/api/LogEntries/{{logEntryId}}
+### Get my logs
+GET {{host}}/api/logs
+Authorization: Bearer {{jwt}}
 Accept: application/json
 
 ###
 
 ### Create a log entry
-POST {{host}}/api/LogEntries
+POST {{host}}/api/logs
+Authorization: Bearer {{jwt}}
 Content-Type: {{contentType}}
 
 {
-  "userId": 1,
   "date": "2026-04-03",
   "hoursRendered": 8,
-  "taskDescription": "Built API endpoint tests",
+  "taskDescription": "Built API auth and DTO integrations",
   "supervisorName": "Mr. Santos"
 }
 
 ###
 
-### Update a log entry by id
-PUT {{host}}/api/LogEntries/{{logEntryId}}
+### Get one of my log entries by id
+@logEntryId = 1
+GET {{host}}/api/logs/{{logEntryId}}
+Authorization: Bearer {{jwt}}
+Accept: application/json
+
+###
+
+### Update one of my log entries by id
+PUT {{host}}/api/logs/{{logEntryId}}
+Authorization: Bearer {{jwt}}
 Content-Type: {{contentType}}
 
 {
-  "id": {{logEntryId}},
-  "userId": 1,
   "date": "2026-04-03",
   "hoursRendered": 7.5,
   "taskDescription": "Updated OJT logs and docs",
@@ -101,43 +104,14 @@ Content-Type: {{contentType}}
 
 ###
 
-### Delete a log entry by id
-DELETE {{host}}/api/LogEntries/{{logEntryId}}
+### Get logs summary
+GET {{host}}/api/logs/summary
+Authorization: Bearer {{jwt}}
 Accept: application/json
 
-### ------------------------------------------------------------
-### AUTH (for when /api/auth endpoints are implemented)
-### ------------------------------------------------------------
-
-### Register (expected future endpoint)
-POST {{host}}/api/auth/register
-Content-Type: {{contentType}}
-
-{
-  "email": "student2@example.com",
-  "password": "StrongPass123!",
-  "firstName": "Maria",
-  "lastName": "Santos"
-}
-
 ###
 
-### Login (expected future endpoint)
-# Optional token capture snippet for REST Client:
-# > {%
-# client.global.set("jwt", response.body.token);
-# %}
-POST {{host}}/api/auth/login
-Content-Type: {{contentType}}
-
-{
-  "email": "student2@example.com",
-  "password": "StrongPass123!"
-}
-
-###
-
-### Example authorized request (expected future protected route)
-GET {{host}}/api/logs
+### Delete one of my log entries by id
+DELETE {{host}}/api/logs/{{logEntryId}}
 Authorization: Bearer {{jwt}}
 Accept: application/json
