@@ -1,108 +1,67 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using Microsoft.AspNetCore.Http;
+using ClockOut.API.Data;
+using ClockOut.API.DTOs.Auth;
+using ClockOut.API.DTOs.Users;
+using ClockOut.API.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using ClockOut.API.Data;
-using ClockOut.API.Models;
 
-namespace ClockOut.API.Controllers
+namespace ClockOut.API.Controllers;
+
+[Authorize]
+[Route("api/me")]
+[ApiController]
+public class UsersController : ControllerBase
 {
-    [Route("api/[controller]")]
-    [ApiController]
-    public class UsersController : ControllerBase
+    private readonly ClockOutAPIContext _context;
+
+    public UsersController(ClockOutAPIContext context)
     {
-        private readonly ClockOutAPIContext _context;
+        _context = context;
+    }
 
-        public UsersController(ClockOutAPIContext context)
+    [HttpGet]
+    public async Task<ActionResult<UserSummaryResponse>> GetMe()
+    {
+        var userId = User.GetRequiredUserId();
+        var user = await _context.User.SingleOrDefaultAsync(u => u.Id == userId);
+        if (user is null)
         {
-            _context = context;
+            return NotFound();
         }
 
-        // GET: api/Users
-        [HttpGet]
-        public async Task<ActionResult<IEnumerable<User>>> GetUser()
+        return Ok(ToUserSummary(user));
+    }
+
+    [HttpPut]
+    public async Task<ActionResult<UserSummaryResponse>> UpdateMe(UpdateMeRequest request)
+    {
+        var userId = User.GetRequiredUserId();
+        var user = await _context.User.SingleOrDefaultAsync(u => u.Id == userId);
+        if (user is null)
         {
-            return await _context.User.ToListAsync();
+            return NotFound();
         }
 
-        // GET: api/Users/5
-        [HttpGet("{id}")]
-        public async Task<ActionResult<User>> GetUser(int id)
+        user.FirstName = request.FirstName.Trim();
+        user.LastName = request.LastName.Trim();
+        user.RequiredHours = request.RequiredHours;
+
+        await _context.SaveChangesAsync();
+
+        return Ok(ToUserSummary(user));
+    }
+
+    private static UserSummaryResponse ToUserSummary(Models.User user)
+    {
+        return new UserSummaryResponse
         {
-            var user = await _context.User.FindAsync(id);
-
-            if (user == null)
-            {
-                return NotFound();
-            }
-
-            return user;
-        }
-
-        // PUT: api/Users/5
-        // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
-        [HttpPut("{id}")]
-        public async Task<IActionResult> PutUser(int id, User user)
-        {
-            if (id != user.Id)
-            {
-                return BadRequest();
-            }
-
-            _context.Entry(user).State = EntityState.Modified;
-
-            try
-            {
-                await _context.SaveChangesAsync();
-            }
-            catch (DbUpdateConcurrencyException)
-            {
-                if (!UserExists(id))
-                {
-                    return NotFound();
-                }
-                else
-                {
-                    throw;
-                }
-            }
-
-            return NoContent();
-        }
-
-        // POST: api/Users
-        // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
-        [HttpPost]
-        public async Task<ActionResult<User>> PostUser(User user)
-        {
-            _context.User.Add(user);
-            await _context.SaveChangesAsync();
-
-            return CreatedAtAction("GetUser", new { id = user.Id }, user);
-        }
-
-        // DELETE: api/Users/5
-        [HttpDelete("{id}")]
-        public async Task<IActionResult> DeleteUser(int id)
-        {
-            var user = await _context.User.FindAsync(id);
-            if (user == null)
-            {
-                return NotFound();
-            }
-
-            _context.User.Remove(user);
-            await _context.SaveChangesAsync();
-
-            return NoContent();
-        }
-
-        private bool UserExists(int id)
-        {
-            return _context.User.Any(e => e.Id == id);
-        }
+            Id = user.Id,
+            Email = user.Email,
+            FirstName = user.FirstName,
+            LastName = user.LastName,
+            RequiredHours = user.RequiredHours,
+            CreatedAt = user.CreatedAt
+        };
     }
 }
