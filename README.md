@@ -42,7 +42,7 @@
 ## Tech Stack
 
 ### Backend
-- C# / ASP.NET Core 8 Web API
+- C# / ASP.NET Core 10 Web API
 - Entity Framework Core 8
 - PostgreSQL
 - JWT Bearer Authentication
@@ -50,7 +50,6 @@
 ### Frontend
 - React + Vite
 - Tailwind CSS
-- Axios
 
 ### Deployment
 - Railway (API + PostgreSQL)
@@ -74,20 +73,25 @@
 
 ## Project Structure
 
+## 📂 Project Structure
+
 ```text
-clock-out/
-├── ClockOut.API/          # ASP.NET Core Web API
-│   ├── Controllers/       # Auth + Logs endpoints
-│   ├── Models/            # User, LogEntry
-│   ├── DTOs/              # Requests and responses
-│   ├── Data/              # AppDbContext
-│   ├── Services/          # Business logic
-│   └── Program.cs         # Middleware and service setup
-└── client/                # React frontend
-    └── src/
-        ├── lib/           # Axios instance
-        ├── pages/         # Login, Register, Dashboard, Logs
-        └── components/    # NavBar, LogCard, HoursGauge
+ClockOut/
+├── ClockOut.API/          # ASP.NET Core 10 Web API
+│   ├── Controllers/       # REST Endpoints
+│   ├── Data/              # DbContext & EF Migrations
+│   ├── DTOs/              # Data Transfer Objects for API Contracts
+│   ├── Models/            # Database Entities (User, LogEntry)
+│   ├── Services/          # Business Logic & Repository Layer
+│   └── Program.cs         # Dependency Injection & Middleware Pipeline
+├── ClockOut.Web/          # React + Vite Frontend
+│   ├── src/
+│   │   ├── components/    # Reusable UI (NavBar, LogCard)
+│   │   ├── context/       # AuthState (JWT Management)
+│   │   ├── lib/           # Axios Instance & Interceptors
+│   │   └── pages/         # Dashboard, Login, Logs
+│   └── package.json
+└── ClockOut.slnx          # Visual Studio 2022 Solution
 ```
 
 <!-- ---
