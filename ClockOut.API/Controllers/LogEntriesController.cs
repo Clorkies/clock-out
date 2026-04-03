@@ -1,108 +1,157 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using Microsoft.AspNetCore.Http;
+using ClockOut.API.Data;
+using ClockOut.API.DTOs.Logs;
+using ClockOut.API.Models;
+using ClockOut.API.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using ClockOut.API.Data;
-using ClockOut.API.Models;
 
-namespace ClockOut.API.Controllers
+namespace ClockOut.API.Controllers;
+
+[Authorize]
+[Route("api/logs")]
+[ApiController]
+public class LogEntriesController : ControllerBase
 {
-    [Route("api/[controller]")]
-    [ApiController]
-    public class LogEntriesController : ControllerBase
+    private readonly ClockOutAPIContext _context;
+
+    public LogEntriesController(ClockOutAPIContext context)
     {
-        private readonly ClockOutAPIContext _context;
+        _context = context;
+    }
 
-        public LogEntriesController(ClockOutAPIContext context)
+    [HttpGet]
+    public async Task<ActionResult<IEnumerable<LogEntryResponse>>> GetMyLogs()
+    {
+        var userId = User.GetRequiredUserId();
+        var logs = await _context.LogEntry
+            .Where(l => l.UserId == userId)
+            .OrderByDescending(l => l.Date)
+            .ThenByDescending(l => l.CreatedAt)
+            .Select(l => ToLogEntryResponse(l))
+            .ToListAsync();
+
+        return Ok(logs);
+    }
+
+    [HttpGet("{id:int}")]
+    public async Task<ActionResult<LogEntryResponse>> GetMyLogById(int id)
+    {
+        var userId = User.GetRequiredUserId();
+        var log = await _context.LogEntry
+            .Where(l => l.Id == id && l.UserId == userId)
+            .Select(l => ToLogEntryResponse(l))
+            .SingleOrDefaultAsync();
+
+        if (log is null)
         {
-            _context = context;
+            return NotFound();
         }
 
-        // GET: api/LogEntries
-        [HttpGet]
-        public async Task<ActionResult<IEnumerable<LogEntry>>> GetLogEntry()
+        return Ok(log);
+    }
+
+    [HttpPost]
+    public async Task<ActionResult<LogEntryResponse>> CreateMyLog(CreateLogEntryRequest request)
+    {
+        var userId = User.GetRequiredUserId();
+        var utcNow = DateTime.UtcNow;
+
+        var logEntry = new LogEntry
         {
-            return await _context.LogEntry.ToListAsync();
+            UserId = userId,
+            Date = request.Date,
+            HoursRendered = request.HoursRendered,
+            TaskDescription = request.TaskDescription.Trim(),
+            SupervisorName = request.SupervisorName.Trim(),
+            CreatedAt = utcNow,
+            UpdatedAt = utcNow
+        };
+
+        _context.LogEntry.Add(logEntry);
+        await _context.SaveChangesAsync();
+
+        return CreatedAtAction(nameof(GetMyLogById), new { id = logEntry.Id }, ToLogEntryResponse(logEntry));
+    }
+
+    [HttpPut("{id:int}")]
+    public async Task<ActionResult<LogEntryResponse>> UpdateMyLog(int id, UpdateLogEntryRequest request)
+    {
+        var userId = User.GetRequiredUserId();
+        var logEntry = await _context.LogEntry.SingleOrDefaultAsync(l => l.Id == id && l.UserId == userId);
+        if (logEntry is null)
+        {
+            return NotFound();
         }
 
-        // GET: api/LogEntries/5
-        [HttpGet("{id}")]
-        public async Task<ActionResult<LogEntry>> GetLogEntry(int id)
+        logEntry.Date = request.Date;
+        logEntry.HoursRendered = request.HoursRendered;
+        logEntry.TaskDescription = request.TaskDescription.Trim();
+        logEntry.SupervisorName = request.SupervisorName.Trim();
+        logEntry.UpdatedAt = DateTime.UtcNow;
+
+        await _context.SaveChangesAsync();
+
+        return Ok(ToLogEntryResponse(logEntry));
+    }
+
+    [HttpDelete("{id:int}")]
+    public async Task<IActionResult> DeleteMyLog(int id)
+    {
+        var userId = User.GetRequiredUserId();
+        var logEntry = await _context.LogEntry.SingleOrDefaultAsync(l => l.Id == id && l.UserId == userId);
+        if (logEntry is null)
         {
-            var logEntry = await _context.LogEntry.FindAsync(id);
-
-            if (logEntry == null)
-            {
-                return NotFound();
-            }
-
-            return logEntry;
+            return NotFound();
         }
 
-        // PUT: api/LogEntries/5
-        // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
-        [HttpPut("{id}")]
-        public async Task<IActionResult> PutLogEntry(int id, LogEntry logEntry)
+        _context.LogEntry.Remove(logEntry);
+        await _context.SaveChangesAsync();
+
+        return NoContent();
+    }
+
+    [HttpGet("summary")]
+    public async Task<ActionResult<LogSummaryResponse>> GetMySummary()
+    {
+        var userId = User.GetRequiredUserId();
+        var user = await _context.User.SingleOrDefaultAsync(u => u.Id == userId);
+        if (user is null)
         {
-            if (id != logEntry.Id)
-            {
-                return BadRequest();
-            }
-
-            _context.Entry(logEntry).State = EntityState.Modified;
-
-            try
-            {
-                await _context.SaveChangesAsync();
-            }
-            catch (DbUpdateConcurrencyException)
-            {
-                if (!LogEntryExists(id))
-                {
-                    return NotFound();
-                }
-                else
-                {
-                    throw;
-                }
-            }
-
-            return NoContent();
+            return NotFound();
         }
 
-        // POST: api/LogEntries
-        // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
-        [HttpPost]
-        public async Task<ActionResult<LogEntry>> PostLogEntry(LogEntry logEntry)
+        var entryCount = await _context.LogEntry.CountAsync(l => l.UserId == userId);
+        var totalHours = await _context.LogEntry
+            .Where(l => l.UserId == userId)
+            .SumAsync(l => (double?)l.HoursRendered) ?? 0;
+
+        var remainingHours = Math.Max(0, user.RequiredHours - totalHours);
+        var percentComplete = user.RequiredHours <= 0
+            ? 0
+            : Math.Min(100, (totalHours / user.RequiredHours) * 100);
+
+        return Ok(new LogSummaryResponse
         {
-            _context.LogEntry.Add(logEntry);
-            await _context.SaveChangesAsync();
+            RequiredHours = user.RequiredHours,
+            TotalHoursLogged = Math.Round(totalHours, 2),
+            RemainingHours = Math.Round(remainingHours, 2),
+            PercentComplete = Math.Round(percentComplete, 2),
+            EntryCount = entryCount
+        });
+    }
 
-            return CreatedAtAction("GetLogEntry", new { id = logEntry.Id }, logEntry);
-        }
-
-        // DELETE: api/LogEntries/5
-        [HttpDelete("{id}")]
-        public async Task<IActionResult> DeleteLogEntry(int id)
+    private static LogEntryResponse ToLogEntryResponse(LogEntry logEntry)
+    {
+        return new LogEntryResponse
         {
-            var logEntry = await _context.LogEntry.FindAsync(id);
-            if (logEntry == null)
-            {
-                return NotFound();
-            }
-
-            _context.LogEntry.Remove(logEntry);
-            await _context.SaveChangesAsync();
-
-            return NoContent();
-        }
-
-        private bool LogEntryExists(int id)
-        {
-            return _context.LogEntry.Any(e => e.Id == id);
-        }
+            Id = logEntry.Id,
+            Date = logEntry.Date,
+            HoursRendered = logEntry.HoursRendered,
+            TaskDescription = logEntry.TaskDescription,
+            SupervisorName = logEntry.SupervisorName,
+            CreatedAt = logEntry.CreatedAt,
+            UpdatedAt = logEntry.UpdatedAt
+        };
     }
 }
