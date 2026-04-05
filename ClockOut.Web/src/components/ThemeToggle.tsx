@@ -41,7 +41,7 @@ function ThemeToggle({ theme, resolvedTheme, setTheme }: ThemeToggleProps) {
       <button
         type="button"
         onClick={() => setIsOpen((previous) => !previous)}
-        className="grid h-8 w-8 place-items-center rounded-full border border-[var(--border)] bg-[var(--surface)] text-[var(--muted)] transition hover:border-[var(--accent-soft)] hover:text-[var(--text)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)]"
+        className="inline-grid place-items-center rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-[var(--muted)] transition duration-200 hover:-translate-y-0.5 hover:border-[var(--accent-soft)] hover:text-[var(--text)] hover:shadow-[var(--card-shadow)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)]"
         aria-haspopup="menu"
         aria-expanded={isOpen}
         aria-label={`Theme menu, current ${label}`}
