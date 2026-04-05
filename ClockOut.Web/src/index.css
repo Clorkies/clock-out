@@ -1,7 +1,48 @@
 @import "tailwindcss";
 
+:root {
+  color-scheme: light;
+  --bg: #f5f4fa;
+  --surface: #f0eef8;
+  --panel: #e9e5f6;
+  --text: #1f1a2d;
+  --muted: #655f78;
+  --border: #ded8ef;
+  --track: #d5cdea;
+  --accent: #6d5ef7;
+  --accent-soft: #d8d3ff;
+  --accent-glow: rgba(136, 102, 255, 0.28);
+  --accent-glow-strong: rgba(92, 71, 237, 0.25);
+  --card-shadow: 0 16px 50px rgba(78, 59, 153, 0.12);
+  --hero-shadow: 0 30px 80px rgba(88, 66, 175, 0.22);
+}
+
+html.dark {
+  color-scheme: dark;
+  --bg: #141420;
+  --surface: #1b1a2b;
+  --panel: #222036;
+  --text: #f4f2ff;
+  --muted: #b5b0d0;
+  --border: #342f4a;
+  --track: #2e2a42;
+  --accent: #8a63ff;
+  --accent-soft: #30274f;
+  --accent-glow: rgba(125, 103, 255, 0.34);
+  --accent-glow-strong: rgba(96, 71, 215, 0.38);
+  --card-shadow: 0 18px 52px rgba(7, 5, 17, 0.5);
+  --hero-shadow: 0 32px 95px rgba(7, 5, 17, 0.62);
+}
+
+* {
+  box-sizing: border-box;
+}
+
 body {
   margin: 0;
+  min-height: 100vh;
+  background-color: var(--bg);
+  color: var(--text);
   font-family:
     Inter,
     ui-sans-serif,
@@ -10,4 +51,14 @@ body {
     BlinkMacSystemFont,
     "Segoe UI",
     sans-serif;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+
+a {
+  color: inherit;
+}
+
+::selection {
+  background: color-mix(in srgb, var(--accent) 28%, transparent);
 }
