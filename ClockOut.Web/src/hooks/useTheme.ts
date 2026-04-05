@@ -10,7 +10,7 @@ const getSystemTheme = (): ResolvedTheme =>
 
 const getInitialTheme = (): ThemeMode => {
   if (typeof window === 'undefined') {
-    return 'system'
+    return 'dark'
   }
 
   const stored = window.localStorage.getItem(STORAGE_KEY)
@@ -18,7 +18,7 @@ const getInitialTheme = (): ThemeMode => {
     return stored
   }
 
-  return 'system'
+  return 'dark'
 }
 
 export function useTheme() {
@@ -52,13 +52,9 @@ export function useTheme() {
     window.localStorage.setItem(STORAGE_KEY, theme)
   }, [theme])
 
-  const toggleTheme = () =>
-    setTheme((previous) => (previous === 'dark' ? 'light' : 'dark'))
-
   return {
     theme,
     resolvedTheme,
     setTheme,
-    toggleTheme,
   }
 }

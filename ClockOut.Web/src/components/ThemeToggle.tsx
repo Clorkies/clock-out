@@ -1,66 +1,97 @@
+import { useEffect, useRef, useState } from 'react'
 import type { ThemeMode, ResolvedTheme } from '../hooks/useTheme'
 
 type ThemeToggleProps = {
   theme: ThemeMode
   resolvedTheme: ResolvedTheme
   setTheme: (theme: ThemeMode) => void
-  toggleTheme: () => void
 }
 
-const baseButtonClass =
-  'rounded-full border px-3 py-1.5 text-xs font-semibold tracking-wide transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)]'
+const modes: ThemeMode[] = ['system', 'light', 'dark']
 
-const inactiveButtonClass =
-  'border-[var(--border)] bg-[var(--surface)] text-[var(--muted)] hover:border-[var(--accent-soft)] hover:text-[var(--text)]'
+function ThemeToggle({ theme, resolvedTheme, setTheme }: ThemeToggleProps) {
+  const [isOpen, setIsOpen] = useState(false)
+  const menuRef = useRef<HTMLDivElement>(null)
 
-const activeButtonClass =
-  'border-[var(--accent)] bg-[var(--accent-soft)] text-[var(--text)]'
+  useEffect(() => {
+    const handlePointerDown = (event: MouseEvent) => {
+      if (!menuRef.current?.contains(event.target as Node)) {
+        setIsOpen(false)
+      }
+    }
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setIsOpen(false)
+      }
+    }
 
-function ThemeToggle({
-  theme,
-  resolvedTheme,
-  setTheme,
-  toggleTheme,
-}: ThemeToggleProps) {
-  const modeLabel = resolvedTheme === 'dark' ? 'Dark' : 'Light'
+    document.addEventListener('mousedown', handlePointerDown)
+    document.addEventListener('keydown', handleEscape)
+
+    return () => {
+      document.removeEventListener('mousedown', handlePointerDown)
+      document.removeEventListener('keydown', handleEscape)
+    }
+  }, [])
+
+  const label = resolvedTheme === 'dark' ? 'Dark' : 'Light'
 
   return (
-    <div className="flex items-center gap-2">
-      <div
-        className="flex items-center gap-1 rounded-full border border-[var(--border)] bg-[var(--surface)]/90 p-1 shadow-[var(--card-shadow)] backdrop-blur"
-        role="group"
-        aria-label="Theme mode selection"
-      >
-        <button
-          type="button"
-          onClick={() => setTheme('light')}
-          className={`${baseButtonClass} ${theme === 'light' ? activeButtonClass : inactiveButtonClass}`}
-        >
-          Light
-        </button>
-        <button
-          type="button"
-          onClick={() => setTheme('system')}
-          className={`${baseButtonClass} ${theme === 'system' ? activeButtonClass : inactiveButtonClass}`}
-        >
-          System
-        </button>
-        <button
-          type="button"
-          onClick={() => setTheme('dark')}
-          className={`${baseButtonClass} ${theme === 'dark' ? activeButtonClass : inactiveButtonClass}`}
-        >
-          Dark
-        </button>
-      </div>
-
+    <div className="relative" ref={menuRef}>
       <button
         type="button"
-        onClick={toggleTheme}
-        className="rounded-full border border-[var(--accent)] bg-[var(--accent)] px-3 py-2 text-xs font-semibold tracking-wide text-white transition hover:brightness-110 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)]"
+        onClick={() => setIsOpen((previous) => !previous)}
+        className="grid h-8 w-8 place-items-center rounded-full border border-[var(--border)] bg-[var(--surface)] text-[var(--muted)] transition hover:border-[var(--accent-soft)] hover:text-[var(--text)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)]"
+        aria-haspopup="menu"
+        aria-expanded={isOpen}
+        aria-label={`Theme menu, current ${label}`}
       >
-        Toggle to {modeLabel === 'Dark' ? 'Light' : 'Dark'}
+        <svg
+          viewBox="0 0 24 24"
+          className="h-4 w-4"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.8"
+          aria-hidden="true"
+        >
+          <circle cx="12" cy="12" r="4.6" />
+          <path d="M12 2.7v2.1M12 19.2v2.1M2.7 12h2.1M19.2 12h2.1M5.4 5.4l1.5 1.5M17.1 17.1l1.5 1.5M18.6 5.4l-1.5 1.5M6.9 17.1l-1.5 1.5" />
+        </svg>
       </button>
+
+      {isOpen ? (
+        <div
+          role="menu"
+          aria-label="Theme selection menu"
+          className="absolute right-0 z-20 mt-2 w-36 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-1.5 shadow-[var(--card-shadow)]"
+        >
+          {modes.map((mode) => {
+            const isActive = theme === mode
+            const title = mode.charAt(0).toUpperCase() + mode.slice(1)
+
+            return (
+              <button
+                key={mode}
+                type="button"
+                role="menuitemradio"
+                aria-checked={isActive}
+                onClick={() => {
+                  setTheme(mode)
+                  setIsOpen(false)
+                }}
+                className={`flex w-full items-center justify-between rounded-lg px-2.5 py-1.5 text-left text-xs font-semibold transition ${
+                  isActive
+                    ? 'bg-[var(--accent-soft)] text-[var(--accent)]'
+                    : 'text-[var(--muted)] hover:bg-[var(--panel)] hover:text-[var(--text)]'
+                }`}
+              >
+                {title}
+                {isActive ? <span aria-hidden="true">On</span> : null}
+              </button>
+            )
+          })}
+        </div>
+      ) : null}
     </div>
   )
 }

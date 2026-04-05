@@ -6,7 +6,6 @@ type LandingPageProps = {
   theme: ThemeMode
   resolvedTheme: ResolvedTheme
   setTheme: (theme: ThemeMode) => void
-  toggleTheme: () => void
 }
 
 const floatingCards = [
@@ -31,7 +30,6 @@ function LandingPage({
   theme,
   resolvedTheme,
   setTheme,
-  toggleTheme,
 }: LandingPageProps) {
   return (
     <div className="relative min-h-screen overflow-hidden bg-[var(--bg)] text-[var(--text)]">
@@ -40,24 +38,34 @@ function LandingPage({
         <div className="absolute bottom-[-11rem] right-[-5rem] h-[24rem] w-[24rem] rounded-full bg-[var(--accent-glow-strong)] blur-[110px]" />
       </div>
 
-      <div className="relative mx-auto flex min-h-screen max-w-7xl flex-col px-4 pb-12 pt-6 md:px-8">
-        <header className="flex flex-wrap items-center justify-between gap-4">
-          <Link to="/" className="flex items-center gap-3">
-            <div className="grid h-11 w-11 place-items-center rounded-xl bg-[var(--accent)] text-sm font-bold text-white shadow-[var(--card-shadow)]">
+      <div className="relative mx-auto flex min-h-screen max-w-7xl flex-col px-4 pb-12 pt-4 md:px-8">
+        <header className="flex flex-wrap items-center justify-between gap-3">
+          <Link to="/" className="flex items-center gap-2.5">
+            <div className="grid h-9 w-9 place-items-center rounded-lg bg-[var(--accent)] text-[11px] font-bold text-white shadow-[var(--card-shadow)]">
               CO
             </div>
-            <div>
-              <p className="text-lg font-semibold tracking-tight">ClockOut</p>
-              <p className="text-xs text-[var(--muted)]">Time tracking that feels modern.</p>
-            </div>
+            <p className="text-base font-semibold tracking-tight">ClockOut</p>
           </Link>
 
-          <ThemeToggle
-            theme={theme}
-            resolvedTheme={resolvedTheme}
-            setTheme={setTheme}
-            toggleTheme={toggleTheme}
-          />
+          <div className="flex items-center gap-2">
+            <Link
+              to="/login"
+              className="rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs font-semibold text-[var(--muted)] transition hover:text-[var(--text)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)]"
+            >
+              Login
+            </Link>
+            <Link
+              to="/signup"
+              className="rounded-lg border border-[var(--accent)] bg-[var(--accent)] px-3 py-1.5 text-xs font-semibold text-white transition hover:brightness-110 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)]"
+            >
+              Sign up
+            </Link>
+            <ThemeToggle
+              theme={theme}
+              resolvedTheme={resolvedTheme}
+              setTheme={setTheme}
+            />
+          </div>
         </header>
 
         <main className="grid flex-1 items-center gap-10 pt-10 md:pt-14 lg:grid-cols-[1.05fr_0.95fr]">
@@ -68,8 +76,15 @@ function LandingPage({
 
             <h1 className="max-w-2xl text-balance text-4xl font-black leading-[1.06] tracking-tight md:text-6xl">
               Time tracking, scheduling, and reporting that feels{' '}
-              <span className="rounded-2xl bg-[var(--accent-soft)] px-2 text-[var(--accent)]">
+              <span
+                className="relative inline-flex items-center bg-[var(--accent-soft)] px-2 py-0.5 align-baseline text-[var(--accent)] md:py-1"
+                style={{ borderRadius: '16px 0px 0px 16px' }}
+              >
                 effortless
+                <span
+                  aria-hidden="true"
+                  className="animate-caret-blink absolute right-0 top-1/2 h-[calc(100%+10px)] w-[2px] -translate-y-1/2 bg-[var(--accent)]"
+                />
               </span>
               .
             </h1>
@@ -82,10 +97,10 @@ function LandingPage({
 
             <div className="mt-8 flex flex-wrap items-center gap-3">
               <Link
-                to="/dashboard"
+                to="/signup"
                 className="rounded-xl border border-[var(--accent)] bg-[var(--accent)] px-6 py-3 text-sm font-semibold text-white shadow-[var(--card-shadow)] transition hover:brightness-110 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)]"
               >
-                Open Dashboard
+                Start tracking
               </Link>
               <a
                 href="#features"
@@ -97,10 +112,11 @@ function LandingPage({
           </section>
 
           <section className="relative">
-            {floatingCards.map((card) => (
+            {floatingCards.map((card, index) => (
               <article
                 key={card.title}
-                className={`absolute hidden w-52 rounded-2xl border border-[var(--border)] bg-[var(--surface)]/85 p-4 shadow-[var(--card-shadow)] backdrop-blur md:block ${card.className}`}
+                className={`animate-fade-up absolute hidden w-52 rounded-2xl border border-[var(--border)] bg-[var(--surface)]/85 p-4 shadow-[var(--card-shadow)] backdrop-blur md:block ${card.className}`}
+                style={{ animationDelay: `${0.1 + index * 0.12}s` }}
               >
                 <p className="text-sm font-semibold text-[var(--accent)]">{card.title}</p>
                 <p className="mt-2 text-xs leading-relaxed text-[var(--muted)]">
@@ -109,7 +125,7 @@ function LandingPage({
               </article>
             ))}
 
-            <div className="relative overflow-hidden rounded-3xl border border-[var(--border)] bg-[var(--surface)] p-6 shadow-[var(--hero-shadow)]">
+            <div className="animate-fade-up-delay-2 relative overflow-hidden rounded-3xl border border-[var(--border)] bg-[var(--surface)] p-6 shadow-[var(--hero-shadow)]">
               <div className="mb-5 flex items-center justify-between">
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--muted)]">

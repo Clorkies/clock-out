@@ -2,9 +2,11 @@ import { Navigate, Route, Routes } from 'react-router-dom'
 import LandingPage from './pages/LandingPage'
 import DashboardPage from './pages/DashboardPage'
 import { useTheme } from './hooks/useTheme'
+import LoginPage from './pages/LoginPage'
+import SignupPage from './pages/SignupPage'
 
 function App() {
-  const { theme, resolvedTheme, setTheme, toggleTheme } = useTheme()
+  const { theme, resolvedTheme, setTheme } = useTheme()
 
   return (
     <Routes>
@@ -15,10 +17,11 @@ function App() {
             theme={theme}
             resolvedTheme={resolvedTheme}
             setTheme={setTheme}
-            toggleTheme={toggleTheme}
           />
         }
       />
+      <Route path="/login" element={<LoginPage />} />
+      <Route path="/signup" element={<SignupPage />} />
       <Route path="/dashboard" element={<DashboardPage />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
