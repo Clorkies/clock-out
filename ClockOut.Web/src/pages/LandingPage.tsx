@@ -495,7 +495,18 @@ function LandingPage({
         <div className="border-t border-[var(--border)]">
           <div className="mx-auto max-w-7xl px-4 py-4 text-xs text-[var(--muted)] md:flex md:items-center md:justify-between md:px-8">
             <p>© 2026 ClockOut. All rights reserved.</p>
-            <p>Crafted by Clorky.</p>
+            <p>
+              Crafted by{' '}
+              <a
+                href="https://clorky.dev"
+                target="_blank"
+                rel="noreferrer"
+                className="font-bold text-[var(--text)] underline-offset-2 transition duration-200 hover:text-[var(--accent)] hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)]"
+              >
+                Clorky
+              </a>
+              .
+            </p>
           </div>
         </div>
       </footer>
