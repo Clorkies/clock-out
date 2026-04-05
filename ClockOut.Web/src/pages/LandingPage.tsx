@@ -88,7 +88,9 @@ function LandingPage({
 
       <div className="relative mx-auto max-w-7xl px-4 pt-3 md:px-8 md:pt-4">
         <div className="flex min-h-svh flex-col pb-10 pt-20 md:pb-14 md:pt-24">
-        <header className="fixed left-1/2 top-3 z-40 flex w-[min(100%-2rem,80rem)] -translate-x-1/2 flex-wrap items-center justify-between gap-3 rounded-2xl border border-[var(--border)] bg-[var(--surface)]/85 px-3 py-2 shadow-[var(--card-shadow)] backdrop-blur md:top-4 md:w-[min(100%-4rem,80rem)] md:px-4 supports-[backdrop-filter]:bg-[var(--surface)]/70">
+        <div className="fixed inset-x-0 top-3 z-40 md:top-4">
+          <div className="mx-auto max-w-7xl px-4 md:px-8">
+        <header className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[var(--border)] bg-[var(--surface)]/85 px-3 py-2 shadow-[var(--card-shadow)] backdrop-blur md:px-4 supports-[backdrop-filter]:bg-[var(--surface)]/70">
           <a href="#top" className="flex items-center gap-2.5">
             <div className="grid h-9 w-9 place-items-center rounded-lg bg-[var(--accent)] text-[11px] font-bold text-white shadow-[var(--card-shadow)]">
               CO
@@ -137,6 +139,8 @@ function LandingPage({
             />
           </div>
         </header>
+          </div>
+        </div>
 
         <main className="grid min-h-0 flex-1 items-start gap-6 py-10 sm:py-12 md:py-14 lg:grid-cols-[1.05fr_0.95fr] lg:items-center lg:gap-10 lg:py-20">
           <section className="relative z-10"> 
