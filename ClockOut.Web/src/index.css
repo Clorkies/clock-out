@@ -34,6 +34,10 @@ html.dark {
   --hero-shadow: 0 32px 95px rgba(7, 5, 17, 0.62);
 }
 
+html {
+  scroll-behavior: smooth;
+}
+
 * {
   box-sizing: border-box;
 }
