@@ -1,5 +1,45 @@
+# -----------------------------
+# General OS/editor artifacts
+# -----------------------------
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
+*.sw?
+
+# -----------------------------
+# .NET / Visual Studio
+# -----------------------------
 .vs/
-bin/
-obj/
+**/bin/
+**/obj/
 *.user
 *.suo
+*.ntvs*
+*.njsproj
+
+# -----------------------------
+# JavaScript / Vite (ClockOut.Web)
+# -----------------------------
+ClockOut.Web/node_modules/
+ClockOut.Web/dist/
+ClockOut.Web/dist-ssr/
+ClockOut.Web/coverage/
+ClockOut.Web/.vite/
+ClockOut.Web/*.tsbuildinfo
+
+# Logs
+ClockOut.Web/logs/
+ClockOut.Web/*.log
+ClockOut.Web/npm-debug.log*
+ClockOut.Web/yarn-debug.log*
+ClockOut.Web/yarn-error.log*
+ClockOut.Web/pnpm-debug.log*
+ClockOut.Web/lerna-debug.log*
+
+# Env/local files
+ClockOut.Web/.env
+ClockOut.Web/.env.*
+ClockOut.Web/*.local
+!ClockOut.Web/.env.example
