@@ -1,0 +1,7 @@
+{
+  "buildCommand": "cd ClockOut.Web && npm ci && npm run build",
+  "installCommand": "cd ClockOut.Web && npm ci",
+  "outputDirectory": "ClockOut.Web/dist",
+  "framework": "vite",
+  "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]
+}
