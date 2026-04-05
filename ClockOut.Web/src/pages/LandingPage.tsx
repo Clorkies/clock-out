@@ -86,8 +86,9 @@ function LandingPage({
         <div className="absolute bottom-[-11rem] right-[-5rem] h-[24rem] w-[24rem] rounded-full bg-[var(--accent-glow-strong)] blur-[110px]" />
       </div>
 
-      <div className="relative mx-auto flex min-h-screen max-w-7xl flex-col px-4 pb-10 pt-3 md:px-8 md:pb-14 md:pt-4">
-        <header className="sticky top-3 z-40 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[var(--border)] bg-[var(--surface)]/85 px-3 py-2 shadow-[var(--card-shadow)] backdrop-blur md:top-4 md:px-4 supports-[backdrop-filter]:bg-[var(--surface)]/70">
+      <div className="relative mx-auto max-w-7xl px-4 pt-3 md:px-8 md:pt-4">
+        <div className="flex min-h-svh flex-col pb-10 pt-20 md:pb-14 md:pt-24">
+        <header className="fixed left-1/2 top-3 z-40 flex w-[min(100%-2rem,80rem)] -translate-x-1/2 flex-wrap items-center justify-between gap-3 rounded-2xl border border-[var(--border)] bg-[var(--surface)]/85 px-3 py-2 shadow-[var(--card-shadow)] backdrop-blur md:top-4 md:w-[min(100%-4rem,80rem)] md:px-4 supports-[backdrop-filter]:bg-[var(--surface)]/70">
           <a href="#top" className="flex items-center gap-2.5">
             <div className="grid h-9 w-9 place-items-center rounded-lg bg-[var(--accent)] text-[11px] font-bold text-white shadow-[var(--card-shadow)]">
               CO
@@ -137,7 +138,7 @@ function LandingPage({
           </div>
         </header>
 
-        <main className="grid min-h-[calc(100svh-9rem)] items-start gap-6 py-10 sm:py-12 md:min-h-[calc(100svh-9.75rem)] md:py-14 lg:min-h-[calc(100svh-10.75rem)] lg:grid-cols-[1.05fr_0.95fr] lg:items-center lg:gap-10 lg:py-20">
+        <main className="grid min-h-0 flex-1 items-start gap-6 py-10 sm:py-12 md:py-14 lg:grid-cols-[1.05fr_0.95fr] lg:items-center lg:gap-10 lg:py-20">
           <section className="relative z-10"> 
             <p className="mb-6 inline-flex rounded-full border border-[var(--border)] bg-[var(--surface)] px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-[var(--accent)] shadow-[var(--card-shadow)]">
               Your personal rhythm
@@ -273,8 +274,9 @@ function LandingPage({
             </div>
           </section>
         </main>
+        </div>
 
-        <section id="features" className="scroll-mt-28 items-center justify-center pt-12 pb-10 md:pt-16 md:pb-16 lg:pt-20">
+        <section id="features" className="scroll-mt-28 items-center justify-center pt-8 pb-10 md:pt-12 md:pb-16 lg:pt-16">
           <div className="mb-5 flex items-center justify-center text-center justify-between gap-4">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--accent)]">
