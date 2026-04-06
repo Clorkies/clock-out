@@ -39,6 +39,7 @@ const heroLineEndOffsets = heroLines.reduce<number[]>((acc, line, index) => {
   acc.push(previous + line.length)
   return acc
 }, [])
+const heroTypingTotalChars = heroLineEndOffsets[heroLineEndOffsets.length - 1]
 
 /** Hero preview card: cap 300h, 67% filled → 201h (nice round joke with 67% attendance). */
 const OVERVIEW_CAP_HOURS = 300
@@ -88,7 +89,7 @@ function LandingPage({
   const animatedBarPercent = overviewT * OVERVIEW_HOURS_PROGRESS * 100
 
   useEffect(() => {
-    const totalChars = fullHeroHeading.length
+    const totalChars = heroTypingTotalChars
     const reduceMotion = window.matchMedia(
       '(prefers-reduced-motion: reduce)',
     ).matches
@@ -130,7 +131,10 @@ function LandingPage({
     Math.min(typedLine4.length, line4Prefix.length),
   )
   const typedLine4Keyword = typedLine4.slice(line4Prefix.length)
-  const activeTypingLine = heroLineEndOffsets.findIndex((end) => typedChars < end)
+  const activeTypingLine =
+    typedChars >= heroTypingTotalChars
+      ? heroLines.length - 1
+      : heroLineEndOffsets.findIndex((end) => typedChars < end)
 
   return (
     <div
@@ -253,7 +257,7 @@ function LandingPage({
                       {activeTypingLine === 3 ? (
                         <span
                           aria-hidden="true"
-                          className="animate-caret-blink absolute right-0 top-1/2 h-[calc(100%+10px)] w-[3.5px] -translate-y-1/2 bg-[var(--accent)]"
+                          className="animate-caret-blink absolute -right-[3.5px] top-1/2 h-[calc(100%+10px)] w-[3.5px] -translate-y-1/2 bg-[var(--accent)]"
                         />
                       ) : null}
                     </span>
