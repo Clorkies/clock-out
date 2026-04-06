@@ -27,10 +27,18 @@ const floatingCards = [
   },
 ]
 
-const heroPrefix = 'Time tracking, scheduling, and insights that feel '
-const heroKeyword = 'effortless'
-const heroSuffix = '.'
-const fullHeroHeading = `${heroPrefix}${heroKeyword}${heroSuffix}`
+const heroLines = [
+  'Time tracking,',
+  'scheduling, and',
+  'insights that',
+  'feel effortless.',
+] as const
+const fullHeroHeading = heroLines.join(' ')
+const heroLineEndOffsets = heroLines.reduce<number[]>((acc, line, index) => {
+  const previous = index === 0 ? 0 : acc[index - 1]
+  acc.push(previous + line.length)
+  return acc
+}, [])
 
 /** Hero preview card: cap 300h, 67% filled → 201h (nice round joke with 67% attendance). */
 const OVERVIEW_CAP_HOURS = 300
@@ -105,16 +113,24 @@ function LandingPage({
     return () => window.clearInterval(intervalId)
   }, [])
 
-  const typedPrefix = heroPrefix.slice(0, Math.min(typedChars, heroPrefix.length))
-  const typedKeyword = heroKeyword.slice(
+  const getTypedLine = (lineIndex: number) => {
+    const start = lineIndex === 0 ? 0 : heroLineEndOffsets[lineIndex - 1]
+    const end = heroLineEndOffsets[lineIndex]
+    const currentCount = Math.max(0, Math.min(typedChars - start, end - start))
+    return heroLines[lineIndex].slice(0, currentCount)
+  }
+
+  const typedLine1 = getTypedLine(0)
+  const typedLine2 = getTypedLine(1)
+  const typedLine3 = getTypedLine(2)
+  const typedLine4 = getTypedLine(3)
+  const line4Prefix = 'feel '
+  const typedLine4Prefix = typedLine4.slice(
     0,
-    Math.max(0, Math.min(typedChars - heroPrefix.length, heroKeyword.length)),
+    Math.min(typedLine4.length, line4Prefix.length),
   )
-  const typedSuffix = heroSuffix.slice(
-    0,
-    Math.max(0, typedChars - heroPrefix.length - heroKeyword.length),
-  )
-  const isTypingDone = typedChars >= fullHeroHeading.length
+  const typedLine4Keyword = typedLine4.slice(line4Prefix.length)
+  const activeTypingLine = heroLineEndOffsets.findIndex((end) => typedChars < end)
 
   return (
     <div
@@ -190,43 +206,62 @@ function LandingPage({
 
             <h1
               aria-label={fullHeroHeading}
-              className="relative max-w-2xl text-balance text-4xl font-black leading-[1.06] tracking-tight md:text-6xl"
+              className="relative max-w-2xl text-4xl font-black leading-[1.06] tracking-tight md:text-6xl"
             >
-              <span aria-hidden="true" className="invisible">
-                {heroPrefix}
-                <span
-                  className="relative inline-flex items-center bg-[var(--accent-soft)] px-2 py-0.5 align-baseline text-[var(--accent)] md:py-1"
-                  style={{ borderRadius: '16px 0px 0px 16px' }}
-                >
-                  {heroKeyword}
+              <span aria-hidden="true" className="invisible block">
+                <span className="block">Time tracking,</span>
+                <span className="block">scheduling, and</span>
+                <span className="block">insights that</span>
+                <span className="block">
+                  feel{' '}
                   <span
-                    aria-hidden="true"
-                    className="absolute right-0 top-1/2 h-[calc(100%+10px)] w-[3.5px] -translate-y-1/2 bg-transparent"
-                  />
-                </span>
-                {heroSuffix}
-              </span>
-              <span aria-hidden="true" className="absolute inset-0">
-                {typedPrefix}
-                {typedKeyword.length === 0 && !isTypingDone ? (
-                  <span
-                    aria-hidden="true"
-                    className="ml-0.5 inline-block h-[1.05em] w-[3.5px] animate-caret-blink bg-[var(--accent)] align-[-0.22em]"
-                  />
-                ) : null}
-                {typedKeyword.length > 0 ? (
-                  <span
-                    className="relative inline-flex items-center bg-[var(--accent-soft)] px-2 py-0.5 align-baseline text-[var(--accent)] md:py-1"
+                    className="inline-flex items-center bg-[var(--accent-soft)] px-2 py-0.5 text-[var(--accent)] md:py-1"
                     style={{ borderRadius: '16px 0px 0px 16px' }}
                   >
-                    {typedKeyword}
-                    <span
-                      aria-hidden="true"
-                      className="animate-caret-blink absolute right-0 top-1/2 h-[calc(100%+10px)] w-[3.5px] -translate-y-1/2 bg-[var(--accent)]"
-                    />
+                    effortless.
                   </span>
-                ) : null}
-                {typedSuffix}
+                </span>
+              </span>
+
+              <span aria-hidden="true" className="absolute inset-0">
+                <span className="block">
+                  {typedLine1}
+                  {activeTypingLine === 0 ? (
+                    <span className="ml-0.5 inline-block h-[1.05em] w-[3.5px] animate-caret-blink bg-[var(--accent)] align-[-0.22em]" />
+                  ) : null}
+                </span>
+                <span className="block">
+                  {typedLine2}
+                  {activeTypingLine === 1 ? (
+                    <span className="ml-0.5 inline-block h-[1.05em] w-[3.5px] animate-caret-blink bg-[var(--accent)] align-[-0.22em]" />
+                  ) : null}
+                </span>
+                <span className="block">
+                  {typedLine3}
+                  {activeTypingLine === 2 ? (
+                    <span className="ml-0.5 inline-block h-[1.05em] w-[3.5px] animate-caret-blink bg-[var(--accent)] align-[-0.22em]" />
+                  ) : null}
+                </span>
+                <span className="block">
+                  {typedLine4Prefix}
+                  {typedLine4Keyword.length > 0 ? (
+                    <span
+                      className="relative inline-flex items-center bg-[var(--accent-soft)] px-2 py-0.5 align-baseline text-[var(--accent)] md:py-1"
+                      style={{ borderRadius: '16px 0px 0px 16px' }}
+                    >
+                      {typedLine4Keyword}
+                      {activeTypingLine === 3 ? (
+                        <span
+                          aria-hidden="true"
+                          className="animate-caret-blink absolute right-0 top-1/2 h-[calc(100%+10px)] w-[3.5px] -translate-y-1/2 bg-[var(--accent)]"
+                        />
+                      ) : null}
+                    </span>
+                  ) : null}
+                  {activeTypingLine === 3 && typedLine4Keyword.length === 0 ? (
+                    <span className="ml-0.5 inline-block h-[1.05em] w-[3.5px] animate-caret-blink bg-[var(--accent)] align-[-0.22em]" />
+                  ) : null}
+                </span>
               </span>
             </h1>
 
