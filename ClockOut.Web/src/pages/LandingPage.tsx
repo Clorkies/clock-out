@@ -32,12 +32,52 @@ const heroKeyword = 'effortless'
 const heroSuffix = '.'
 const fullHeroHeading = `${heroPrefix}${heroKeyword}${heroSuffix}`
 
+/** Hero preview card: cap 300h, 67% filled → 201h (nice round joke with 67% attendance). */
+const OVERVIEW_CAP_HOURS = 300
+const OVERVIEW_LOGGED_HOURS = Math.round(OVERVIEW_CAP_HOURS * 0.67)
+const OVERVIEW_ATTENDANCE_PCT = 67
+const OVERVIEW_HOURS_PROGRESS =
+  OVERVIEW_LOGGED_HOURS / OVERVIEW_CAP_HOURS
+
+function easeOutCubic(t: number) {
+  return 1 - (1 - t) ** 3
+}
+
 function LandingPage({
   theme,
   resolvedTheme,
   setTheme,
 }: LandingPageProps) {
   const [typedChars, setTypedChars] = useState(0)
+  const [overviewT, setOverviewT] = useState(0)
+
+  useEffect(() => {
+    const reduceMotion = window.matchMedia(
+      '(prefers-reduced-motion: reduce)',
+    ).matches
+    if (reduceMotion) {
+      setOverviewT(1)
+      return
+    }
+
+    const durationMs = 1400
+    const start = performance.now()
+    let raf = 0
+
+    const step = (now: number) => {
+      const elapsed = now - start
+      const linear = Math.min(1, elapsed / durationMs)
+      setOverviewT(easeOutCubic(linear))
+      if (linear < 1) raf = requestAnimationFrame(step)
+    }
+
+    raf = requestAnimationFrame(step)
+    return () => cancelAnimationFrame(raf)
+  }, [])
+
+  const animatedHours = Math.round(overviewT * OVERVIEW_LOGGED_HOURS)
+  const animatedAttendance = Math.round(overviewT * OVERVIEW_ATTENDANCE_PCT)
+  const animatedBarPercent = overviewT * OVERVIEW_HOURS_PROGRESS * 100
 
   useEffect(() => {
     const totalChars = fullHeroHeading.length
@@ -243,11 +283,19 @@ function LandingPage({
                 <div className="rounded-xl border border-[var(--border)] bg-[var(--panel)] p-4">
                   <div className="mb-3 flex items-center justify-between">
                     <p className="text-sm font-semibold">Hours Logged</p>
-                    <p className="text-sm font-semibold text-[var(--accent)]">92h</p>
+                    <p className="text-sm font-semibold text-[var(--accent)] tabular-nums">
+                      {animatedHours}h
+                    </p>
                   </div>
                   <div className="h-2 rounded-full bg-[var(--track)]">
-                    <div className="h-2 w-4/5 rounded-full bg-[var(--accent)]" />
+                    <div
+                      className="h-2 rounded-full bg-[var(--accent)]"
+                      style={{ width: `${animatedBarPercent}%` }}
+                    />
                   </div>
+                  <p className="mt-1.5 text-[10px] font-medium uppercase tracking-wider text-[var(--muted)]">
+                    of {OVERVIEW_CAP_HOURS}h cap
+                  </p>
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
@@ -255,7 +303,9 @@ function LandingPage({
                     <p className="text-xs uppercase tracking-[0.18em] text-[var(--muted)]">
                       Attendance
                     </p>
-                    <p className="mt-2 text-2xl font-bold text-[var(--text)]">97%</p>
+                    <p className="mt-2 text-2xl font-bold tabular-nums text-[var(--text)]">
+                      {animatedAttendance}%
+                    </p>
                   </div>
                   <div className="rounded-xl border border-[var(--border)] bg-[var(--panel)] p-4">
                     <p className="text-xs uppercase tracking-[0.18em] text-[var(--muted)]">
@@ -270,8 +320,9 @@ function LandingPage({
                     Today
                   </p>
                   <p className="mt-2 text-sm leading-relaxed text-[var(--muted)]">
-                    5 people clocked in, 2 shifts ending within 45 minutes, and
-                    payroll export is ready for approval.
+                    4 OJT folks checked in, one is &ldquo;just finishing the
+                    module&rdquo; since breakfast, and your mentor still owes a
+                    signature on yesterday&apos;s shadow log.
                   </p>
                 </div>
               </div>
