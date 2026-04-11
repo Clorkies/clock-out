@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom'
 
 function SignupPage() {
   return (
-    <main className="relative min-h-screen overflow-hidden bg-[var(--bg)] px-4 py-8 text-[var(--text)] md:px-8">
+    <main className="relative flex min-h-screen flex-col justify-center overflow-hidden bg-[var(--bg)] px-4 py-8 text-[var(--text)] md:px-8">
       <div className="pointer-events-none absolute inset-0">
         <div className="absolute left-[8%] top-[-7rem] h-[18rem] w-[24rem] rounded-full bg-[var(--accent-glow)] blur-[110px]" />
         <div className="absolute bottom-[-10rem] right-[8%] h-[18rem] w-[24rem] rounded-full bg-[var(--accent-glow-strong)] blur-[115px]" />

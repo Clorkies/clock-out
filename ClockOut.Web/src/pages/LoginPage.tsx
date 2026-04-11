@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom'
 
 function LoginPage() {
   return (
-    <main className="relative min-h-screen overflow-hidden bg-[var(--bg)] px-4 py-8 text-[var(--text)] md:px-8">
+    <main className="relative flex min-h-screen flex-col justify-center overflow-hidden bg-[var(--bg)] px-4 py-8 text-[var(--text)] md:px-8">
       <div className="pointer-events-none absolute inset-0">
         <div className="absolute left-[12%] top-[-6rem] h-[18rem] w-[22rem] rounded-full bg-[var(--accent-glow)] blur-[100px]" />
         <div className="absolute bottom-[-9rem] right-[6%] h-[18rem] w-[22rem] rounded-full bg-[var(--accent-glow-strong)] blur-[110px]" />
