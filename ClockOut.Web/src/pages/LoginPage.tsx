@@ -1,6 +1,12 @@
 import { Link } from 'react-router-dom'
 
 function LoginPage() {
+  const [showPassword, setShowPassword] = useState(false)
+
+  const handleGoogleSignIn = () => {
+    console.info('Google sign-in placeholder clicked')
+  }
+
   return (
     <main className="relative flex min-h-screen flex-col justify-center overflow-hidden bg-[var(--bg)] px-4 py-8 text-[var(--text)] md:px-8">
       <div className="pointer-events-none absolute inset-0">
