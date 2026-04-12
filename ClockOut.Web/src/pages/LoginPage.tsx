@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
 
 function LoginPage() {
@@ -15,40 +16,25 @@ function LoginPage() {
       </div>
 
       <section className="relative mx-auto grid w-full max-w-6xl items-stretch overflow-hidden rounded-3xl border border-[var(--border)] bg-[var(--surface)]/92 shadow-[var(--hero-shadow)] backdrop-blur lg:grid-cols-[0.95fr_1.05fr]">
-        <aside className="hidden border-r border-[var(--border)] bg-[var(--panel)]/80 p-8 lg:flex lg:flex-col">
-          <Link to="/" className="inline-flex w-fit items-center gap-2.5">
+        <aside className="relative hidden overflow-hidden border-r border-[var(--border)] bg-[var(--panel)]/70 p-8 lg:flex lg:items-center lg:justify-center">
+          <Link to="/" className="absolute left-8 top-8 inline-flex items-center gap-2.5">
             <div className="grid h-9 w-9 place-items-center rounded-lg bg-[var(--accent)] text-[11px] font-bold text-white">
               CO
             </div>
             <span className="text-base font-semibold tracking-tight">ClockOut</span>
           </Link>
 
-          <div className="mt-10">
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--accent)]">
-              Welcome back
-            </p>
-            <h1 className="mt-3 text-3xl font-black leading-tight tracking-tight">
-              Manage shifts with clarity and confidence.
-            </h1>
-            <p className="mt-4 max-w-sm text-sm leading-relaxed text-[var(--muted)]">
-              Sign in to review attendance, approve entries, and keep payroll-ready
-              records in one place.
-            </p>
+          <div className="pointer-events-none absolute inset-0">
+            <div className="auth-blob auth-blob-1" />
+            <div className="auth-blob auth-blob-2" />
+            <div className="auth-blob auth-blob-3" />
+            <div className="auth-blob auth-blob-4" />
           </div>
 
-          <div className="mt-auto grid gap-3">
-            {[
-              'Realtime team activity snapshots',
-              'Exportable attendance and hour reports',
-              'Clean workflow for managers and teams',
-            ].map((item) => (
-              <div
-                key={item}
-                className="rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm text-[var(--muted)]"
-              >
-                {item}
-              </div>
-            ))}
+          <div className="relative z-10 grid h-[17rem] w-[17rem] place-items-center rounded-full border border-[var(--border)]/75 bg-[var(--surface)]/35 shadow-[var(--card-shadow)] backdrop-blur-sm">
+            <div className="grid h-[12rem] w-[12rem] place-items-center rounded-full border border-[var(--border)]/70 bg-[var(--surface)]/40 auth-spin-slow">
+              <div className="h-3.5 w-3.5 rounded-full bg-[var(--accent)] shadow-[0_0_26px_var(--accent)]" />
+            </div>
           </div>
         </aside>
 

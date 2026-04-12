@@ -107,6 +107,82 @@ a {
   animation: caretBlink 1.2s steps(1, end) infinite;
 }
 
+@keyframes authBlobFloat {
+  0% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(10px, -14px, 0) scale(1.06);
+  }
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+
+@keyframes authSpin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.auth-blob {
+  position: absolute;
+  border-radius: 999px;
+  filter: blur(6px);
+  animation: authBlobFloat 8.6s ease-in-out infinite;
+}
+
+.auth-blob-1 {
+  left: 8%;
+  top: 7%;
+  height: 15rem;
+  width: 19rem;
+  background: color-mix(in srgb, var(--accent-glow-strong) 76%, transparent);
+}
+
+.auth-blob-2 {
+  right: 9%;
+  top: 24%;
+  height: 13rem;
+  width: 17rem;
+  background: color-mix(in srgb, var(--accent-glow) 78%, transparent);
+  animation-delay: 0.8s;
+}
+
+.auth-blob-3 {
+  left: 18%;
+  bottom: 10%;
+  height: 12rem;
+  width: 15rem;
+  background: color-mix(in srgb, var(--accent-glow) 70%, transparent);
+  animation-delay: 1.4s;
+}
+
+.auth-blob-4 {
+  right: 10%;
+  bottom: 9%;
+  height: 12rem;
+  width: 14rem;
+  background: color-mix(in srgb, var(--accent-glow-strong) 68%, transparent);
+  animation-delay: 2.2s;
+}
+
+.auth-blob-5 {
+  left: 14%;
+  top: 43%;
+  height: 10rem;
+  width: 13rem;
+  background: color-mix(in srgb, var(--accent-glow) 66%, transparent);
+  animation-delay: 1.9s;
+}
+
+.auth-spin-slow {
+  animation: authSpin 18s linear infinite;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
