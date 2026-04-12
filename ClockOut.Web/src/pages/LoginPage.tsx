@@ -146,6 +146,20 @@ function LoginPage() {
             >
               Sign in
             </button>
+
+            <button
+              type="button"
+              onClick={handleGoogleSignIn}
+              className="flex w-full items-center justify-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--surface)] px-4 py-2.5 text-sm font-semibold text-[var(--text)] transition hover:border-[var(--accent)]/45 hover:bg-[var(--panel)]"
+            >
+              <svg viewBox="0 0 24 24" className="h-4 w-4" aria-hidden="true">
+                <path
+                  fill="#EA4335"
+                  d="M12 10.2v3.9h5.45c-.24 1.25-1.65 3.68-5.45 3.68-3.28 0-5.95-2.71-5.95-6.05s2.67-6.05 5.95-6.05c1.87 0 3.12.8 3.84 1.49l2.62-2.55C16.77 2.97 14.59 2 12 2 6.95 2 2.86 6.06 2.86 11.1S6.95 20.2 12 20.2c6.94 0 9.14-4.83 9.14-7.32 0-.49-.05-.85-.12-1.22H12z"
+                />
+              </svg>
+              Sign in with Google
+            </button>
           </form>
 
           <p className="mt-6 text-sm text-[var(--muted)]">
