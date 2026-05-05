@@ -52,7 +52,7 @@
 - Tailwind CSS
 
 ### Deployment
-- Railway (API + PostgreSQL)
+- Supabase (PostgreSQL)
 - Vercel (React frontend)
 
 ---
