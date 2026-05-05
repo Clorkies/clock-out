@@ -12,8 +12,9 @@ import type {
   UserSummary,
 } from '../types/api'
 
-const API_BASE_URL =
-  (import.meta.env.VITE_API_URL as string | undefined)?.trim() || 'http://localhost:5278'
+const API_BASE_URL = (import.meta.env.VITE_API_URL as string | undefined)
+  ?.trim()
+  ?.replace(/\/+$/, '')
 
 export class ApiError extends Error {
   readonly status: number
@@ -40,6 +41,14 @@ async function request<T>(
   init: RequestInit = {},
   options: { requiresAuth?: boolean } = {},
 ): Promise<T> {
+  if (!API_BASE_URL) {
+    throw new ApiError(
+      500,
+      'Missing VITE_API_URL. Configure your frontend environment variables and redeploy.',
+      null,
+    )
+  }
+
   const headers = new Headers(init.headers)
   if (!headers.has('Content-Type') && init.body) {
     headers.set('Content-Type', 'application/json')

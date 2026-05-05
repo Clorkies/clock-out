@@ -53,6 +53,7 @@
 
 ### Deployment
 - Supabase (PostgreSQL)
+- Railway (API)
 - Vercel (React frontend)
 
 ---
@@ -93,66 +94,4 @@ ClockOut/
 │   │   └── types/         # API contract types
 │   └── package.json
 └── ClockOut.slnx          # Visual Studio 2022 Solution
-```
-
----
-
-## Local Setup
-
-### Prerequisites
-
-- [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0)
-- [Node.js 18+](https://nodejs.org)
-- [Supabase project](https://supabase.com/) with PostgreSQL database access
-
-### 1) Backend Setup
-
-```bash
-cd ClockOut.API
-```
-
-Set backend secrets (recommended):
-
-```bash
-dotnet user-secrets set "ConnectionStrings:ClockOutAPIContext" "Host=<your-supabase-host>;Port=5432;Username=postgres;Password=<your-db-password>;Database=postgres;SSL Mode=Require;Trust Server Certificate=true"
-dotnet user-secrets set "Jwt:Key" "<your-32-plus-char-secret>"
-dotnet user-secrets set "Jwt:Issuer" "clockout-api"
-dotnet user-secrets set "Jwt:Audience" "clockout-client"
-```
-
-Or via environment variables:
-
-```bash
-setx ConnectionStrings__ClockOutAPIContext "Host=<your-supabase-host>;Port=5432;Username=postgres;Password=<your-db-password>;Database=postgres;SSL Mode=Require;Trust Server Certificate=true"
-setx Jwt__Key "<your-32-plus-char-secret>"
-setx Jwt__Issuer "clockout-api"
-setx Jwt__Audience "clockout-client"
-```
-
-Run database migrations and start the API:
-
-```bash
-dotnet ef database update
-dotnet run
-```
-
-API default URL in this repo: `http://localhost:5278`
-
-### 2) Frontend Setup
-
-```bash
-cd ../ClockOut.Web
-npm install
-```
-
-Create `.env` in `ClockOut.Web/`:
-
-```env
-VITE_API_URL=http://localhost:5278
-```
-
-Run the frontend:
-
-```bash
-npm run dev
 ```
