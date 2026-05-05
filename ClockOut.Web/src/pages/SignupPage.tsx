@@ -12,27 +12,24 @@ function SignupPage() {
       </div>
 
       <section className="relative mx-auto grid w-full max-w-6xl items-stretch overflow-hidden rounded-3xl border border-[var(--border)] bg-[var(--surface)]/92 shadow-[var(--hero-shadow)] backdrop-blur lg:grid-cols-[1.02fr_0.98fr]">
-        <div className="p-6 sm:p-8 md:p-10">
-          <div className="mb-8 flex items-center justify-between">
-            <Link to="/" className="text-sm font-medium text-[var(--muted)] hover:text-[var(--accent)]">
-              Back
-            </Link>
+        <div className="order-2 p-6 sm:p-8 md:p-10">
+          <div className="mb-8 flex items-center">
             <Link
-              to="/login"
-              className="rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs font-semibold text-[var(--muted)] transition hover:text-[var(--text)]"
+              to="/"
+              className="inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium text-[var(--muted)]/80 transition hover:bg-[var(--surface)] hover:text-[var(--muted)] focus-visible:bg-[var(--surface)] focus-visible:outline-none"
             >
-              I have an account
+              <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                <path d="M15 18l-6-6 6-6" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+              Back
             </Link>
           </div>
 
           <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">
-            Create your ClockOut workspace
+            Create your ClockOut account
           </h1>
-          <p className="mt-2 text-xs font-semibold uppercase tracking-[0.18em] text-[var(--accent)]">
-            Sign up
-          </p>
           <p className="mt-2 text-sm text-[var(--muted)]">
-            Get your team up and running with smarter hour tracking.
+            Start tracking your hours and attendance in one place.
           </p>
 
           <form
@@ -74,7 +71,7 @@ function SignupPage() {
                 name="email"
                 type="email"
                 autoComplete="email"
-                placeholder="you@company.com"
+                placeholder="you@example.com"
                 className="w-full rounded-xl border border-[var(--border)] bg-[var(--bg)] px-3.5 py-2.5 text-sm placeholder:text-[var(--muted)]/70 focus:border-[var(--accent)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/25"
               />
             </div>
@@ -115,33 +112,47 @@ function SignupPage() {
               </div>
             </div>
 
-            <label className="sm:col-span-2 flex items-start gap-2.5 text-sm leading-relaxed text-[var(--muted)]">
-              <input
-                type="checkbox"
-                className="mt-0.5 h-4 w-4 rounded border-[var(--border)] bg-[var(--surface)] accent-[var(--accent)]"
-              />
-              I agree to the terms and privacy policy.
-            </label>
-
             <button
               type="submit"
               className="sm:col-span-2 w-full rounded-xl border border-[var(--accent)] bg-[var(--accent)] px-4 py-2.5 text-sm font-semibold text-white transition hover:brightness-110 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)]"
             >
               Create account
             </button>
+
+            <button
+              type="button"
+              className="sm:col-span-2 flex w-full items-center justify-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--surface)] px-4 py-2.5 text-sm font-semibold text-[var(--text)] transition hover:border-[var(--accent)]/45 hover:bg-[var(--panel)]"
+            >
+              <svg viewBox="0 0 48 48" className="h-4 w-4" aria-hidden="true">
+                <path
+                  fill="#FFC107"
+                  d="M43.611 20.083H42V20H24v8h11.303A12.01 12.01 0 0124 36c-6.627 0-12-5.373-12-12s5.373-12 12-12c3.059 0 5.842 1.154 7.96 3.04l5.657-5.657A19.888 19.888 0 0024 4C12.955 4 4 12.955 4 24s8.955 20 20 20 20-8.955 20-20c0-1.341-.138-2.65-.389-3.917z"
+                />
+                <path
+                  fill="#FF3D00"
+                  d="M6.306 14.691l6.571 4.819A11.965 11.965 0 0124 12c3.059 0 5.842 1.154 7.96 3.04l5.657-5.657A19.888 19.888 0 0024 4c-7.682 0-14.344 4.337-17.694 10.691z"
+                />
+                <path
+                  fill="#4CAF50"
+                  d="M24 44c5.166 0 9.86-1.977 13.409-5.192l-6.19-5.238A11.935 11.935 0 0124 36c-5.201 0-9.62-3.317-11.283-7.946l-6.522 5.025A19.983 19.983 0 0024 44z"
+                />
+                <path
+                  fill="#1976D2"
+                  d="M43.611 20.083H42V20H24v8h11.303a12.05 12.05 0 01-5.993 6.571l6.19 5.238C39.793 36.139 44 30.55 44 24c0-1.341-.138-2.65-.389-3.917z"
+                />
+              </svg>
+              Sign up with Google
+            </button>
           </form>
         </div>
 
-        <aside className="relative hidden overflow-hidden border-l border-[var(--border)] bg-[var(--panel)]/80 p-8 lg:flex lg:flex-col">
-          <div className="pointer-events-none absolute inset-0">
-            <div className="auth-blob auth-blob-2" />
-            <div className="auth-blob auth-blob-4" />
-            <div className="auth-blob auth-blob-5" />
-          </div>
+        <aside className="order-1 relative hidden overflow-hidden border-r border-[var(--border)] bg-[var(--panel)]/80 p-8 lg:flex lg:flex-col">
           <Link to="/" className="inline-flex w-fit items-center gap-2.5">
-            <div className="grid h-9 w-9 place-items-center rounded-lg bg-[var(--accent)] text-[11px] font-bold text-white">
-              CO
-            </div>
+            <img
+              src="/ClockOut_Logo.png"
+              alt="ClockOut logo"
+              className="h-9 w-9 rounded-lg object-cover"
+            />
             <span className="text-base font-semibold tracking-tight">ClockOut</span>
           </Link>
 
@@ -151,9 +162,9 @@ function SignupPage() {
             </p>
             <ul className="mt-5 space-y-4">
               {[
-                'Unified clock-in and clock-out records for every teammate.',
-                'Clear attendance and overtime visibility for managers.',
-                'Payroll-friendly exports for faster and cleaner cutoffs.',
+                'Simple clock-in and clock-out records for your daily routine.',
+                'Clear attendance and overtime visibility for your own hours.',
+                'Quick export-ready data whenever you need your logs.',
               ].map((item) => (
                 <li key={item} className="flex items-start gap-3 text-sm leading-relaxed text-[var(--text)]/90">
                   <span className="mt-1 h-2 w-2 rounded-full bg-[var(--accent)] shadow-[0_0_16px_var(--accent)]" />
@@ -166,9 +177,9 @@ function SignupPage() {
           <div className="relative z-10 mt-8 grid grid-cols-2 gap-3">
             {[
               { value: '4 min', label: 'Onboarding setup' },
-              { value: '24/7', label: 'Access for team' },
+              { value: '24/7', label: 'Access anytime' },
               { value: '100%', label: 'Export ready data' },
-              { value: '1 place', label: 'Shift overview' },
+              { value: '1 place', label: 'Hours overview' },
             ].map((metric) => (
               <div key={metric.label} className="rounded-xl border border-[var(--border)]/70 bg-[var(--surface)]/55 px-3 py-2.5 backdrop-blur-sm">
                 <p className="text-sm font-semibold text-[var(--text)]">{metric.value}</p>
@@ -184,7 +195,7 @@ function SignupPage() {
               Already registered?
             </p>
             <p className="mt-2 text-sm text-[var(--muted)]">
-              Jump back in and continue where your team left off.
+              Jump back in and continue where you left off.
             </p>
             <Link
               to="/login"

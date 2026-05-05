@@ -152,9 +152,11 @@ function LandingPage({
           <div className="mx-auto max-w-7xl px-4 md:px-8">
         <header className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[var(--border)] bg-[var(--surface)]/85 px-3 py-2 shadow-[var(--card-shadow)] backdrop-blur md:px-4 supports-[backdrop-filter]:bg-[var(--surface)]/70">
           <a href="#top" className="flex items-center gap-2.5">
-            <div className="grid h-9 w-9 place-items-center rounded-lg bg-[var(--accent)] text-[11px] font-bold text-white shadow-[var(--card-shadow)]">
-              CO
-            </div>
+            <img
+              src="/ClockOut_Logo.png"
+              alt="ClockOut logo"
+              className="h-9 w-9 rounded-lg object-cover shadow-[var(--card-shadow)]"
+            />
             <span className="text-base font-semibold tracking-tight">ClockOut</span>
           </a>
 
