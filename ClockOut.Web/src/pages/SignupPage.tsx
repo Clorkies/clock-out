@@ -148,9 +148,11 @@ function SignupPage() {
 
         <aside className="order-1 relative hidden overflow-hidden border-r border-[var(--border)] bg-[var(--panel)]/80 p-8 lg:flex lg:flex-col">
           <Link to="/" className="inline-flex w-fit items-center gap-2.5">
-            <div className="grid h-9 w-9 place-items-center rounded-lg bg-[var(--accent)] text-[11px] font-bold text-white">
-              CO
-            </div>
+            <img
+              src="/ClockOut_Logo.png"
+              alt="ClockOut logo"
+              className="h-9 w-9 rounded-lg object-cover"
+            />
             <span className="text-base font-semibold tracking-tight">ClockOut</span>
           </Link>
 

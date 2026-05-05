@@ -526,9 +526,11 @@ function DashboardPage({ theme, resolvedTheme, setTheme }: DashboardPageProps) {
         <header className="relative mb-10 flex items-center justify-between">
             {/* Nav Bar Pill */}
             <div className="flex items-center gap-3 rounded-2xl border border-[var(--border)] bg-[var(--surface)]/90 px-5 py-2.5 shadow-sm backdrop-blur-md">
-              <div className="grid h-8 w-8 place-items-center rounded-lg bg-[var(--accent)] text-[11px] font-bold tracking-wider text-white shadow-sm">
-                CO
-              </div>
+              <img
+                src="/ClockOut_Logo.png"
+                alt="ClockOut logo"
+                className="h-8 w-8 rounded-lg object-cover shadow-sm"
+              />
               <p className="text-sm font-bold tracking-tight">ClockOut</p>
             </div>
 
