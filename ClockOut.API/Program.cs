@@ -12,6 +12,12 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddDbContext<ClockOutAPIContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("ClockOutAPIContext") ?? throw new InvalidOperationException("Connection string 'ClockOutAPIContext' not found.")));
 
+var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>();
+if (allowedOrigins is null || allowedOrigins.Length == 0)
+{
+    allowedOrigins = ["http://localhost:5173"];
+}
+
 var jwtSection = builder.Configuration.GetSection(JwtOptions.SectionName);
 var jwtIssuer = jwtSection["Issuer"] ?? throw new InvalidOperationException("JWT Issuer is not configured.");
 var jwtAudience = jwtSection["Audience"] ?? throw new InvalidOperationException("JWT Audience is not configured.");
@@ -43,6 +49,16 @@ builder.Services.Configure<ApiBehaviorOptions>(options =>
 builder.Services.Configure<JwtOptions>(jwtSection);
 builder.Services.AddScoped<IPasswordService, PasswordService>();
 builder.Services.AddScoped<IJwtTokenService, JwtTokenService>();
+
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("FrontendClient", policy =>
+    {
+        policy.WithOrigins(allowedOrigins)
+            .AllowAnyHeader()
+            .AllowAnyMethod();
+    });
+});
 
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
@@ -78,6 +94,7 @@ app.MapGet("/", () => Results.Ok(new
 }));
 
 app.UseHttpsRedirection();
+app.UseCors("FrontendClient");
 app.UseAuthentication();
 
 app.UseAuthorization();
