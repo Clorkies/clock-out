@@ -63,6 +63,8 @@
 |--------|----------|------|-------------|
 | POST | `/api/auth/register` | — | Create a new account |
 | POST | `/api/auth/login` | — | Return a JWT token |
+| GET | `/api/me` | ✅ | Get current authenticated user |
+| PUT | `/api/me` | ✅ | Update profile and required hours |
 | GET | `/api/logs` | ✅ | Get all logs for current user |
 | POST | `/api/logs` | ✅ | Create a new log entry |
 | PUT | `/api/logs/{id}` | ✅ | Update a log entry |
@@ -73,8 +75,6 @@
 
 ## Project Structure
 
-## 📂 Project Structure
-
 ```text
 ClockOut/
 ├── ClockOut.API/          # ASP.NET Core 10 Web API
@@ -82,27 +82,28 @@ ClockOut/
 │   ├── Data/              # DbContext & EF Migrations
 │   ├── DTOs/              # Data Transfer Objects for API Contracts
 │   ├── Models/            # Database Entities (User, LogEntry)
-│   ├── Services/          # Business Logic & Repository Layer
+│   ├── Services/          # JWT + Password Services
 │   └── Program.cs         # Dependency Injection & Middleware Pipeline
 ├── ClockOut.Web/          # React + Vite Frontend
 │   ├── src/
-│   │   ├── components/    # Reusable UI (NavBar, LogCard)
-│   │   ├── context/       # AuthState (JWT Management)
-│   │   ├── lib/           # Axios Instance & Interceptors
-│   │   └── pages/         # Dashboard, Login, Logs
+│   │   ├── components/    # Reusable UI
+│   │   ├── hooks/         # Theme hooks
+│   │   ├── lib/           # API + Auth utilities
+│   │   ├── pages/         # Landing, Login, Signup, Dashboard
+│   │   └── types/         # API contract types
 │   └── package.json
 └── ClockOut.slnx          # Visual Studio 2022 Solution
 ```
 
-<!-- ---
+---
 
 ## Local Setup
 
 ### Prerequisites
 
-- [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8)
+- [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0)
 - [Node.js 18+](https://nodejs.org)
-- [PostgreSQL](https://www.postgresql.org/download)
+- [Supabase project](https://supabase.com/) with PostgreSQL database access
 
 ### 1) Backend Setup
 
@@ -110,19 +111,22 @@ ClockOut/
 cd ClockOut.API
 ```
 
-Create `appsettings.Development.json` (gitignored):
+Set backend secrets (recommended):
 
-```json
-{
-  "ConnectionStrings": {
-    "DefaultConnection": "Host=localhost;Database=clockout;Username=postgres;Password=yourpassword"
-  },
-  "Jwt": {
-    "Key": "your-super-secret-key-at-least-32-characters",
-    "Issuer": "clockout-api",
-    "Audience": "clockout-client"
-  }
-}
+```bash
+dotnet user-secrets set "ConnectionStrings:ClockOutAPIContext" "Host=<your-supabase-host>;Port=5432;Username=postgres;Password=<your-db-password>;Database=postgres;SSL Mode=Require;Trust Server Certificate=true"
+dotnet user-secrets set "Jwt:Key" "<your-32-plus-char-secret>"
+dotnet user-secrets set "Jwt:Issuer" "clockout-api"
+dotnet user-secrets set "Jwt:Audience" "clockout-client"
+```
+
+Or via environment variables:
+
+```bash
+setx ConnectionStrings__ClockOutAPIContext "Host=<your-supabase-host>;Port=5432;Username=postgres;Password=<your-db-password>;Database=postgres;SSL Mode=Require;Trust Server Certificate=true"
+setx Jwt__Key "<your-32-plus-char-secret>"
+setx Jwt__Issuer "clockout-api"
+setx Jwt__Audience "clockout-client"
 ```
 
 Run database migrations and start the API:
@@ -132,51 +136,23 @@ dotnet ef database update
 dotnet run
 ```
 
-Swagger UI: `https://localhost:5001/swagger`
+API default URL in this repo: `http://localhost:5278`
 
 ### 2) Frontend Setup
 
 ```bash
-cd client
+cd ../ClockOut.Web
 npm install
 ```
 
-Create `.env` in `client/`:
+Create `.env` in `ClockOut.Web/`:
 
 ```env
-VITE_API_URL=https://localhost:5001
+VITE_API_URL=http://localhost:5278
 ```
 
 Run the frontend:
 
 ```bash
 npm run dev
-``` -->
-
-<!-- 
-## Deployment
-
-### Backend — Railway
-
-1. Push to GitHub
-2. New Project → Deploy from GitHub repo → select `clock-out`
-3. Set root directory to `ClockOut.API`
-4. Add PostgreSQL plugin
-5. Set environment variables:
-
-```
-ConnectionStrings__DefaultConnection   =  (use Railway's PostgreSQL URL)
-Jwt__Key                               =  your-production-secret-key
-Jwt__Issuer                            =  clockout-api
-Jwt__Audience                          =  clockout-client
-```
-
-### Frontend — Vercel
-
-1. New Project → Import from GitHub → select `clock-out`
-2. Set root directory to `client`
-3. Set environment variable: -->
-
-```
-VITE_API_URL  =  https://your-api.railway.app
 ```
