@@ -1,4 +1,6 @@
 import { useMemo, useRef, useState, useEffect, type ChangeEvent, type FormEvent } from 'react'
+import jsPDF from 'jspdf'
+import autoTable from 'jspdf-autotable'
 
 // ─── Font injection ───────────────────────────────────────────────────────────
 if (!document.getElementById('dashboard-fonts')) {
@@ -268,6 +270,165 @@ function DashboardPage() {
     if (editingId === id) clearForm()
   }
 
+  const downloadDashboardReport = () => {
+    const doc = new jsPDF({ unit: 'pt', format: 'a4' })
+    const pageWidth = doc.internal.pageSize.getWidth()
+    const margin = 40
+
+    const safeSetFill = (r: number, g: number, b: number) => doc.setFillColor(r, g, b)
+    const safeSetText = (r: number, g: number, b: number) => doc.setTextColor(r, g, b)
+    const formatDateTime = new Date().toLocaleString()
+
+    // Title
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(20)
+    safeSetText(30, 26, 45)
+    doc.text('ClockOut Dashboard Report', margin, 48)
+    doc.setFont('helvetica', 'normal')
+    doc.setFontSize(10)
+    safeSetText(100, 94, 123)
+    doc.text(`Generated: ${formatDateTime}`, margin, 66)
+
+    // Progress overview panel
+    const panelY = 86
+    const panelW = pageWidth - margin * 2
+    const panelH = 238
+    safeSetFill(240, 238, 248)
+    doc.roundedRect(margin, panelY, panelW, panelH, 14, 14, 'F')
+
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(12)
+    safeSetText(45, 39, 66)
+    doc.text('Progress Overview', margin + 16, panelY + 24)
+
+    // KPI cards
+    const cardY = panelY + 38
+    const cardGap = 10
+    const cardW = (panelW - 32 - cardGap * 2) / 3
+    const cards = [
+      { label: 'Total Hours', value: `${formatHours(totalHoursLogged)}h` },
+      { label: 'Remaining', value: `${formatHours(remainingHours)}h` },
+      { label: 'Completion', value: `${percentCompleteRaw.toFixed(1)}%` },
+    ]
+    cards.forEach((card, idx) => {
+      const x = margin + 16 + idx * (cardW + cardGap)
+      safeSetFill(255, 255, 255)
+      doc.roundedRect(x, cardY, cardW, 58, 10, 10, 'F')
+      doc.setFont('helvetica', 'normal')
+      doc.setFontSize(9)
+      safeSetText(110, 104, 130)
+      doc.text(card.label, x + 10, cardY + 18)
+      doc.setFont('helvetica', 'bold')
+      doc.setFontSize(16)
+      safeSetText(42, 36, 64)
+      doc.text(card.value, x + 10, cardY + 40)
+    })
+
+    // Progress bar
+    const progressY = cardY + 78
+    doc.setFont('helvetica', 'normal')
+    doc.setFontSize(9)
+    safeSetText(92, 86, 113)
+    doc.text(
+      `${formatHours(totalHoursLogged)}h of ${formatHours(requiredHours)}h target`,
+      margin + 16,
+      progressY - 8,
+    )
+    safeSetFill(213, 205, 234)
+    doc.roundedRect(margin + 16, progressY, panelW - 32, 8, 4, 4, 'F')
+    safeSetFill(109, 94, 247)
+    doc.roundedRect(margin + 16, progressY, ((panelW - 32) * percentComplete) / 100, 8, 4, 4, 'F')
+
+    // 7-day mini bar visual
+    const graphY = progressY + 28
+    const graphX = margin + 16
+    const graphW = panelW - 32
+    const graphH = 72
+    const barGap = 8
+    const barW = (graphW - barGap * (recentHoursSeries.length - 1)) / recentHoursSeries.length
+    recentHoursSeries.forEach((hours, idx) => {
+      const normalized = hours === 0 ? 0.15 : Math.max(0.15, hours / recentHoursPeak)
+      const barH = graphH * normalized
+      const x = graphX + idx * (barW + barGap)
+      const y = graphY + (graphH - barH)
+      safeSetFill(125, 104, 249)
+      doc.roundedRect(x, y, barW, barH, 3, 3, 'F')
+    })
+    doc.setFontSize(8)
+    safeSetText(120, 113, 142)
+    doc.text('Recent 7 logged days', graphX, graphY + graphH + 13)
+
+    // Insights section
+    const totalEntries = logs.length
+    const averageHours = totalEntries ? totalHoursLogged / totalEntries : 0
+    const sortedByHours = [...logs].sort((a, b) => b.hoursRendered - a.hoursRendered)
+    const topEntry = sortedByHours[0]
+    const supervisorHoursMap = logs.reduce<Record<string, number>>((acc, entry) => {
+      acc[entry.supervisorName] = (acc[entry.supervisorName] ?? 0) + entry.hoursRendered
+      return acc
+    }, {})
+    const topSupervisor = Object.entries(supervisorHoursMap).sort((a, b) => b[1] - a[1])[0]
+
+    const insightsY = panelY + panelH + 24
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(12)
+    safeSetText(45, 39, 66)
+    doc.text('Insights Summary', margin, insightsY)
+    doc.setFont('helvetica', 'normal')
+    doc.setFontSize(10)
+    safeSetText(86, 80, 106)
+    const insights = [
+      `Average hours per entry: ${formatHours(averageHours)}h`,
+      `Highest single log: ${topEntry ? `${formatHours(topEntry.hoursRendered)}h on ${formatDateLabel(topEntry.date)}` : 'N/A'}`,
+      `Top supervisor by total logged hours: ${topSupervisor ? `${topSupervisor[0]} (${formatHours(topSupervisor[1])}h)` : 'N/A'}`,
+      `Current completion: ${percentCompleteRaw.toFixed(1)}% (${formatHours(remainingHours)}h remaining)`,
+    ]
+    insights.forEach((line, idx) => doc.text(`- ${line}`, margin, insightsY + 20 + idx * 16))
+
+    // Logs table section
+    const tableStartY = insightsY + 96
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(12)
+    safeSetText(45, 39, 66)
+    doc.text('Detailed Entry Logs', margin, tableStartY)
+
+    autoTable(doc, {
+      startY: tableStartY + 8,
+      head: [['Date', 'Hours', 'Task Description', 'Supervisor']],
+      body: orderedLogs.map((entry) => [
+        formatDateLabel(entry.date),
+        `${formatHours(entry.hoursRendered)}h`,
+        entry.taskDescription,
+        entry.supervisorName,
+      ]),
+      theme: 'grid',
+      styles: {
+        fontSize: 9,
+        cellPadding: 6,
+        textColor: [45, 39, 66],
+        lineColor: [222, 216, 239],
+        lineWidth: 0.6,
+      },
+      headStyles: {
+        fillColor: [109, 94, 247],
+        textColor: [255, 255, 255],
+        fontStyle: 'bold',
+      },
+      alternateRowStyles: {
+        fillColor: [248, 246, 255],
+      },
+      columnStyles: {
+        0: { cellWidth: 86 },
+        1: { cellWidth: 58, halign: 'right' },
+        2: { cellWidth: 270 },
+        3: { cellWidth: 100 },
+      },
+      margin: { left: margin, right: margin },
+    })
+
+    doc.save(`clockout-dashboard-report-${new Date().toISOString().slice(0, 10)}.pdf`)
+  }
+
   return (
     <div
       className="relative min-h-screen overflow-x-hidden bg-[var(--bg)] text-[var(--text)] pb-20"
@@ -303,8 +464,22 @@ function DashboardPage() {
               <p className="text-sm font-bold tracking-tight">ClockOut</p>
             </div>
 
-            {/* User profile dropdown */}
-            <div className="relative z-50" ref={profileRef}>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={downloadDashboardReport}
+                className="inline-flex items-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--surface)]/95 px-3.5 py-2 text-xs font-semibold text-[var(--text)] shadow-sm transition hover:border-[var(--accent)]/45 hover:bg-[var(--panel)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)]"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                  <polyline points="7 10 12 15 17 10" />
+                  <line x1="12" y1="15" x2="12" y2="3" />
+                </svg>
+                Download PDF
+              </button>
+
+              {/* User profile dropdown */}
+              <div className="relative z-50" ref={profileRef}>
               <button
                 type="button"
                 onClick={() => setProfileOpen((p) => !p)}
@@ -342,6 +517,7 @@ function DashboardPage() {
                 </div>
               )}
             </div>
+            </div>
         </header>
 
         <main className="space-y-6">
@@ -357,9 +533,6 @@ function DashboardPage() {
                 </p>
                 <h2 className="mt-1 text-base font-semibold">OJT tracker snapshot</h2>
               </div>
-              <span className="rounded-full border border-[var(--border)] bg-[var(--panel)] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--muted)]">
-                {logs.length} {logs.length === 1 ? 'entry' : 'entries'}
-              </span>
             </div>
 
             <div className="grid gap-4 xl:grid-cols-12">
