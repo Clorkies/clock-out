@@ -1,8 +1,21 @@
-import { useMemo, useRef, useState, useEffect, type ChangeEvent, type FormEvent } from 'react'
+import { useCallback, useMemo, useRef, useState, useEffect, type ChangeEvent, type FormEvent } from 'react'
+import { useNavigate } from 'react-router-dom'
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import ThemeToggle from '../components/ThemeToggle'
 import type { ThemeMode, ResolvedTheme } from '../hooks/useTheme'
+import {
+  ApiError,
+  createLog,
+  deleteLog,
+  getLogs,
+  getMe,
+  getSummary,
+  updateLog,
+  updateMe,
+} from '../lib/api'
+import { clearAuthState } from '../lib/auth'
+import type { LogEntry, LogSummary, UserSummary } from '../types/api'
 
 // ─── Font injection ───────────────────────────────────────────────────────────
 if (!document.getElementById('dashboard-fonts')) {
@@ -14,17 +27,7 @@ if (!document.getElementById('dashboard-fonts')) {
   document.head.appendChild(link)
 }
 
-const REQUIRED_HOURS = 300
 const TASK_PREVIEW_CHAR_LIMIT = 120
-
-type LogEntry = {
-  id: string
-  date: string
-  hoursRendered: number
-  taskDescription: string
-  supervisorName: string
-  createdAt: string
-}
 
 type LogForm = {
   date: string
@@ -39,38 +42,6 @@ type DashboardPageProps = {
   resolvedTheme: ResolvedTheme
   setTheme: (theme: ThemeMode) => void
 }
-type DashboardUserIdentity = {
-  firstName: string
-  lastName: string
-  email: string
-}
-
-const seededLogs: LogEntry[] = [
-  {
-    id: 'log-1',
-    date: '2026-05-03',
-    hoursRendered: 8,
-    taskDescription: 'Implemented login validation and polished error handling.',
-    supervisorName: 'Ms. Garcia',
-    createdAt: '2026-05-03T09:00:00.000Z',
-  },
-  {
-    id: 'log-2',
-    date: '2026-05-02',
-    hoursRendered: 7.5,
-    taskDescription: 'Built signup layout and improved responsive spacing.',
-    supervisorName: 'Ms. Garcia',
-    createdAt: '2026-05-02T08:40:00.000Z',
-  },
-  {
-    id: 'log-3',
-    date: '2026-05-01',
-    hoursRendered: 6.5,
-    taskDescription: 'Reviewed API contracts for summary and log endpoints.',
-    supervisorName: 'Mr. Reyes',
-    createdAt: '2026-05-01T08:10:00.000Z',
-  },
-]
 
 const initialForm: LogForm = {
   date: '',
@@ -106,56 +77,6 @@ function getTodayDateInputValue() {
   return `${yyyy}-${mm}-${dd}`
 }
 
-function getUserIdentityFromStorage(): DashboardUserIdentity {
-  const fallback: DashboardUserIdentity = {
-    firstName: 'Guest',
-    lastName: 'User',
-    email: 'Not provided',
-  }
-
-  if (typeof window === 'undefined') return fallback
-
-  const candidateKeys = ['clockout_user', 'clockoutUser', 'authUser', 'user', 'profile']
-
-  for (const key of candidateKeys) {
-    const raw = window.localStorage.getItem(key)
-    if (!raw) continue
-
-    try {
-      const parsed = JSON.parse(raw) as Record<string, unknown>
-      const source =
-        typeof parsed.user === 'object' && parsed.user !== null
-          ? (parsed.user as Record<string, unknown>)
-          : parsed
-
-      const firstName =
-        typeof source.firstName === 'string'
-          ? source.firstName
-          : typeof source.firstname === 'string'
-            ? source.firstname
-            : ''
-      const lastName =
-        typeof source.lastName === 'string'
-          ? source.lastName
-          : typeof source.lastname === 'string'
-            ? source.lastname
-            : ''
-      const email = typeof source.email === 'string' ? source.email : ''
-
-      if (firstName || lastName || email) {
-        return {
-          firstName: firstName || fallback.firstName,
-          lastName: lastName || fallback.lastName,
-          email: email || fallback.email,
-        }
-      }
-    } catch {
-      continue
-    }
-  }
-
-  return fallback
-}
 
 function validateForm(form: LogForm) {
   const errors: FormErrors = {}
@@ -180,10 +101,12 @@ const inputCls =
 // ─── OJT Target Modal ─────────────────────────────────────────────────────────
 function OjtTargetModal({
   current,
+  isSaving,
   onSave,
   onClose,
 }: {
   current: number
+  isSaving: boolean
   onSave: (h: number) => void
   onClose: () => void
 }) {
@@ -205,6 +128,7 @@ function OjtTargetModal({
           min={1}
           max={10000}
           value={val}
+          disabled={isSaving}
           onChange={(e) => setVal(e.target.value)}
           className={inputCls}
         />
@@ -214,12 +138,14 @@ function OjtTargetModal({
               const n = Number(val)
               if (n > 0) onSave(n)
             }}
+            disabled={isSaving}
             className="flex-1 rounded-lg bg-[var(--accent)] py-2 text-xs font-semibold text-white transition hover:brightness-110"
           >
-            Save
+            {isSaving ? 'Saving...' : 'Save'}
           </button>
           <button
             onClick={onClose}
+            disabled={isSaving}
             className="flex-1 rounded-lg border border-[var(--border)] py-2 text-xs font-semibold text-[var(--text)] transition hover:border-[var(--accent)]/40"
           >
             Cancel
@@ -231,14 +157,21 @@ function OjtTargetModal({
 }
 
 function DashboardPage({ theme, resolvedTheme, setTheme }: DashboardPageProps) {
-  const [requiredHours, setRequiredHours] = useState(REQUIRED_HOURS)
-  const [logs, setLogs] = useState<LogEntry[]>(seededLogs)
+  const navigate = useNavigate()
+  const [userProfile, setUserProfile] = useState<UserSummary | null>(null)
+  const [summary, setSummary] = useState<LogSummary | null>(null)
+  const [logs, setLogs] = useState<LogEntry[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [pageError, setPageError] = useState<string | null>(null)
+  const [isSubmittingLog, setIsSubmittingLog] = useState(false)
+  const [isSavingRequiredHours, setIsSavingRequiredHours] = useState(false)
+  const [deletingId, setDeletingId] = useState<number | null>(null)
   const [form, setForm] = useState<LogForm>({ ...initialForm, date: getTodayDateInputValue() })
   const [formErrors, setFormErrors] = useState<FormErrors>({})
-  const [editingId, setEditingId] = useState<string | null>(null)
+  const [editingId, setEditingId] = useState<number | null>(null)
   const [profileOpen, setProfileOpen] = useState(false)
   const [ojtModalOpen, setOjtModalOpen] = useState(false)
-  const [expandedTaskDescriptions, setExpandedTaskDescriptions] = useState<Record<string, boolean>>({})
+  const [expandedTaskDescriptions, setExpandedTaskDescriptions] = useState<Record<number, boolean>>({})
   const profileRef = useRef<HTMLDivElement>(null)
 
   // Close dropdown on outside click
@@ -252,10 +185,63 @@ function DashboardPage({ theme, resolvedTheme, setTheme }: DashboardPageProps) {
     return () => document.removeEventListener('mousedown', handler)
   }, [])
 
+  const handleApiError = useCallback((error: unknown, fallbackMessage: string) => {
+    if (error instanceof ApiError) {
+      if (error.status === 401) {
+        clearAuthState()
+        navigate('/login', { replace: true })
+        return
+      }
+
+      setPageError(error.message)
+      return
+    }
+
+    setPageError(fallbackMessage)
+  }, [navigate])
+
+  useEffect(() => {
+    let isMounted = true
+
+    async function loadDashboardData() {
+      setIsLoading(true)
+      setPageError(null)
+
+      try {
+        const [me, myLogs, mySummary] = await Promise.all([getMe(), getLogs(), getSummary()])
+        if (!isMounted) {
+          return
+        }
+
+        setUserProfile(me)
+        setLogs(myLogs)
+        setSummary(mySummary)
+      } catch (error) {
+        if (!isMounted) {
+          return
+        }
+
+        handleApiError(error, 'Unable to load dashboard data right now.')
+      } finally {
+        if (isMounted) {
+          setIsLoading(false)
+        }
+      }
+    }
+
+    void loadDashboardData()
+
+    return () => {
+      isMounted = false
+    }
+  }, [handleApiError])
+
+  const requiredHours = summary?.requiredHours ?? userProfile?.requiredHours ?? 0
   const orderedLogs = useMemo(() => sortLogsNewestFirst(logs), [logs])
-  const totalHoursLogged = useMemo(() => logs.reduce((t, e) => t + e.hoursRendered, 0), [logs])
-  const remainingHours = Math.max(0, requiredHours - totalHoursLogged)
-  const percentCompleteRaw = requiredHours > 0 ? (totalHoursLogged / requiredHours) * 100 : 0
+  const totalHoursLogged = summary?.totalHoursLogged ?? logs.reduce((t, e) => t + e.hoursRendered, 0)
+  const remainingHours = summary?.remainingHours ?? Math.max(0, requiredHours - totalHoursLogged)
+  const percentCompleteRaw =
+    summary?.percentComplete ?? (requiredHours > 0 ? (totalHoursLogged / requiredHours) * 100 : 0)
   const percentComplete = Math.min(100, percentCompleteRaw)
   const recentHoursSeries = useMemo(() => {
     const series = orderedLogs
@@ -266,7 +252,14 @@ function DashboardPage({ theme, resolvedTheme, setTheme }: DashboardPageProps) {
     return series
   }, [orderedLogs])
   const recentHoursPeak = useMemo(() => Math.max(8, ...recentHoursSeries), [recentHoursSeries])
-  const userIdentity = useMemo(() => getUserIdentityFromStorage(), [])
+  const userIdentity = useMemo(
+    () => ({
+      firstName: userProfile?.firstName ?? 'User',
+      lastName: userProfile?.lastName ?? '',
+      email: userProfile?.email ?? 'Not available',
+    }),
+    [userProfile],
+  )
 
   const clearForm = () => {
     setForm({ ...initialForm, date: getTodayDateInputValue() })
@@ -281,34 +274,41 @@ function DashboardPage({ theme, resolvedTheme, setTheme }: DashboardPageProps) {
       if (formErrors[field]) setFormErrors((c) => ({ ...c, [field]: undefined }))
     }
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
+    setPageError(null)
+
     const nextErrors = validateForm(form)
     if (Object.keys(nextErrors).length > 0) {
       setFormErrors(nextErrors)
       return
     }
-    const payload: Omit<LogEntry, 'id' | 'createdAt'> = {
+
+    const payload = {
       date: form.date,
       hoursRendered: Number(form.hoursRendered),
       taskDescription: form.taskDescription.trim(),
       supervisorName: form.supervisorName.trim(),
     }
-    if (editingId) {
-      setLogs((c) => c.map((e) => (e.id === editingId ? { ...e, ...payload } : e)))
+
+    setIsSubmittingLog(true)
+    try {
+      if (editingId !== null) {
+        const updatedEntry = await updateLog(editingId, payload)
+        setLogs((current) => current.map((entry) => (entry.id === editingId ? updatedEntry : entry)))
+      } else {
+        const createdEntry = await createLog(payload)
+        setLogs((current) => [createdEntry, ...current])
+      }
+
+      const nextSummary = await getSummary()
+      setSummary(nextSummary)
       clearForm()
-      return
+    } catch (error) {
+      handleApiError(error, 'Unable to save this log entry right now.')
+    } finally {
+      setIsSubmittingLog(false)
     }
-    const newEntry: LogEntry = {
-      id:
-        typeof crypto !== 'undefined' && crypto.randomUUID
-          ? crypto.randomUUID()
-          : `log-${Date.now()}`,
-      createdAt: new Date().toISOString(),
-      ...payload,
-    }
-    setLogs((c) => [newEntry, ...c])
-    clearForm()
   }
 
   const startEditing = (entry: LogEntry) => {
@@ -323,15 +323,60 @@ function DashboardPage({ theme, resolvedTheme, setTheme }: DashboardPageProps) {
     document.getElementById('log-form')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }
 
-  const deleteEntry = (id: string) => {
-    setLogs((c) => c.filter((e) => e.id !== id))
-    setExpandedTaskDescriptions((current) => {
-      if (!current[id]) return current
-      const next = { ...current }
-      delete next[id]
-      return next
-    })
-    if (editingId === id) clearForm()
+  const deleteEntry = async (id: number) => {
+    setPageError(null)
+    setDeletingId(id)
+
+    try {
+      await deleteLog(id)
+      setLogs((current) => current.filter((entry) => entry.id !== id))
+      setExpandedTaskDescriptions((current) => {
+        if (!current[id]) return current
+        const next = { ...current }
+        delete next[id]
+        return next
+      })
+      if (editingId === id) {
+        clearForm()
+      }
+
+      const nextSummary = await getSummary()
+      setSummary(nextSummary)
+    } catch (error) {
+      handleApiError(error, 'Unable to delete this log entry right now.')
+    } finally {
+      setDeletingId(null)
+    }
+  }
+
+  const handleSaveRequiredHours = async (hours: number) => {
+    if (!userProfile) {
+      return
+    }
+
+    setPageError(null)
+    setIsSavingRequiredHours(true)
+    try {
+      const updatedProfile = await updateMe({
+        firstName: userProfile.firstName,
+        lastName: userProfile.lastName,
+        requiredHours: hours,
+      })
+      setUserProfile(updatedProfile)
+
+      const nextSummary = await getSummary()
+      setSummary(nextSummary)
+      setOjtModalOpen(false)
+    } catch (error) {
+      handleApiError(error, 'Unable to update required hours right now.')
+    } finally {
+      setIsSavingRequiredHours(false)
+    }
+  }
+
+  const handleLogout = () => {
+    clearAuthState()
+    navigate('/login', { replace: true })
   }
 
   const downloadDashboardReport = () => {
@@ -513,12 +558,23 @@ function DashboardPage({ theme, resolvedTheme, setTheme }: DashboardPageProps) {
       {ojtModalOpen && (
         <OjtTargetModal
           current={requiredHours}
-          onSave={(h) => { setRequiredHours(h); setOjtModalOpen(false) }}
+          isSaving={isSavingRequiredHours}
+          onSave={handleSaveRequiredHours}
           onClose={() => setOjtModalOpen(false)}
         />
       )}
 
       <div className="relative mx-auto max-w-7xl px-4 py-8 md:px-8">
+        {isLoading && (
+          <div className="mb-4 rounded-xl border border-[var(--border)] bg-[var(--surface)] px-4 py-3 text-sm text-[var(--muted)]">
+            Loading your dashboard...
+          </div>
+        )}
+        {pageError && (
+          <div className="mb-4 rounded-xl border border-rose-400/50 bg-rose-500/10 px-4 py-3 text-sm text-rose-500">
+            {pageError}
+          </div>
+        )}
 
         {/* ════════════════════════════════
             HEADER — Free floating elements
@@ -588,7 +644,7 @@ function DashboardPage({ theme, resolvedTheme, setTheme }: DashboardPageProps) {
                       </button>
                       <button
                         type="button"
-                        onClick={() => { setProfileOpen(false); /* Handle logout logic here */ }}
+                        onClick={() => { setProfileOpen(false); handleLogout() }}
                         className="flex w-full items-center gap-3 px-4 py-3 text-xs font-medium text-rose-500 transition hover:bg-rose-500/10"
                       >
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
@@ -833,9 +889,14 @@ function DashboardPage({ theme, resolvedTheme, setTheme }: DashboardPageProps) {
                   <div className="flex flex-wrap items-center gap-2 pt-2">
                     <button
                       type="submit"
+                      disabled={isSubmittingLog}
                       className="w-full sm:w-auto rounded-lg bg-[var(--accent)] px-5 py-2.5 text-xs font-semibold text-white shadow-sm transition hover:brightness-110 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)]"
                     >
-                      {editingId ? 'Save changes' : 'Add entry'}
+                      {isSubmittingLog
+                        ? 'Saving...'
+                        : editingId
+                          ? 'Save changes'
+                          : 'Add entry'}
                     </button>
                     <button
                       type="button"
@@ -943,9 +1004,10 @@ function DashboardPage({ theme, resolvedTheme, setTheme }: DashboardPageProps) {
                                 <button
                                   type="button"
                                   onClick={() => deleteEntry(entry.id)}
+                                  disabled={deletingId === entry.id}
                                   className="rounded-lg border border-rose-400/40 bg-rose-500/10 px-3 py-1.5 text-[11px] font-semibold text-rose-500 transition hover:bg-rose-500/20 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rose-500"
                                 >
-                                  Delete
+                                  {deletingId === entry.id ? 'Deleting...' : 'Delete'}
                                 </button>
                               </div>
                             </td>

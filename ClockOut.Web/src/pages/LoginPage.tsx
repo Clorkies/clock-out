@@ -1,11 +1,44 @@
-import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { type FormEvent, useState } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
+import { ApiError, login } from '../lib/api'
+import { setAuthState } from '../lib/auth'
 
 function LoginPage() {
+  const navigate = useNavigate()
   const [showPassword, setShowPassword] = useState(false)
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [errorMessage, setErrorMessage] = useState<string | null>(null)
+  const [googleMessage, setGoogleMessage] = useState<string | null>(null)
 
   const handleGoogleSignIn = () => {
-    console.info('Google sign-in placeholder clicked')
+    setGoogleMessage('Google sign-in is not available yet. Please use email and password.')
+  }
+
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    setErrorMessage(null)
+    setGoogleMessage(null)
+    setIsSubmitting(true)
+
+    try {
+      const auth = await login({
+        email: email.trim(),
+        password,
+      })
+
+      setAuthState(auth)
+      navigate('/dashboard', { replace: true })
+    } catch (error) {
+      if (error instanceof ApiError) {
+        setErrorMessage(error.message)
+      } else {
+        setErrorMessage('Unable to sign in right now. Please try again.')
+      }
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   return (
@@ -31,8 +64,18 @@ function LoginPage() {
         <section className="mt-6 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6 shadow-[var(--card-shadow)] sm:p-8">
         <form
           className="space-y-4"
-          onSubmit={(event) => event.preventDefault()}
+          onSubmit={handleSubmit}
         >
+          {errorMessage && (
+            <p className="rounded-lg border border-rose-400/50 bg-rose-500/10 px-3 py-2 text-sm text-rose-500">
+              {errorMessage}
+            </p>
+          )}
+          {googleMessage && (
+            <p className="rounded-lg border border-amber-400/50 bg-amber-500/10 px-3 py-2 text-sm text-amber-500">
+              {googleMessage}
+            </p>
+          )}
           <div>
             <label htmlFor="email" className="mb-1.5 block text-xs font-semibold uppercase tracking-[0.16em] text-[var(--muted)]">
               Email
@@ -43,7 +86,10 @@ function LoginPage() {
               type="email"
               autoComplete="email"
               placeholder="you@example.com"
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
               className="w-full rounded-xl border border-[var(--border)] bg-[var(--bg)] px-3.5 py-2.5 text-sm text-[var(--text)] placeholder:text-[var(--muted)]/70 focus:border-[var(--accent)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/25"
+              required
             />
           </div>
 
@@ -63,7 +109,11 @@ function LoginPage() {
                 type={showPassword ? 'text' : 'password'}
                 autoComplete="current-password"
                 placeholder="Enter password"
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
                 className="w-full rounded-xl border border-[var(--border)] bg-[var(--bg)] px-3.5 py-2.5 pr-11 text-sm text-[var(--text)] placeholder:text-[var(--muted)]/70 focus:border-[var(--accent)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/25"
+                minLength={8}
+                required
               />
               <button
                 type="button"
@@ -98,9 +148,10 @@ function LoginPage() {
 
           <button
             type="submit"
+            disabled={isSubmitting}
             className="w-full rounded-xl border border-[var(--accent)] bg-[var(--accent)] px-4 py-2.5 text-sm font-semibold text-white transition hover:brightness-110 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)]"
           >
-            Sign in
+            {isSubmitting ? 'Signing in...' : 'Sign in'}
           </button>
 
           <button

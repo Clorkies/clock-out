@@ -1,8 +1,49 @@
-import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { type FormEvent, useState } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
+import { ApiError, register } from '../lib/api'
+import { setAuthState } from '../lib/auth'
 
 function SignupPage() {
+  const navigate = useNavigate()
   const [showPassword, setShowPassword] = useState(false)
+  const [firstName, setFirstName] = useState('')
+  const [lastName, setLastName] = useState('')
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [errorMessage, setErrorMessage] = useState<string | null>(null)
+  const [googleMessage, setGoogleMessage] = useState<string | null>(null)
+
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    setErrorMessage(null)
+    setGoogleMessage(null)
+    setIsSubmitting(true)
+
+    try {
+      const auth = await register({
+        firstName: firstName.trim(),
+        lastName: lastName.trim(),
+        email: email.trim(),
+        password,
+      })
+
+      setAuthState(auth)
+      navigate('/dashboard', { replace: true })
+    } catch (error) {
+      if (error instanceof ApiError) {
+        setErrorMessage(error.message)
+      } else {
+        setErrorMessage('Unable to create account right now. Please try again.')
+      }
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  const handleGoogleSignup = () => {
+    setGoogleMessage('Google sign-up is not available yet. Please use email and password.')
+  }
 
   return (
     <main className="relative flex min-h-screen flex-col justify-center overflow-hidden bg-[var(--bg)] px-4 py-8 text-[var(--text)] md:px-8">
@@ -34,8 +75,18 @@ function SignupPage() {
 
           <form
             className="mt-7 grid gap-4 sm:grid-cols-2"
-            onSubmit={(event) => event.preventDefault()}
+            onSubmit={handleSubmit}
           >
+            {errorMessage && (
+              <p className="sm:col-span-2 rounded-lg border border-rose-400/50 bg-rose-500/10 px-3 py-2 text-sm text-rose-500">
+                {errorMessage}
+              </p>
+            )}
+            {googleMessage && (
+              <p className="sm:col-span-2 rounded-lg border border-amber-400/50 bg-amber-500/10 px-3 py-2 text-sm text-amber-500">
+                {googleMessage}
+              </p>
+            )}
             <div>
               <label htmlFor="firstName" className="mb-1.5 block text-xs font-semibold uppercase tracking-[0.16em] text-[var(--muted)]">
                 First name
@@ -45,7 +96,11 @@ function SignupPage() {
                 name="firstName"
                 type="text"
                 autoComplete="given-name"
+                value={firstName}
+                onChange={(event) => setFirstName(event.target.value)}
                 className="w-full rounded-xl border border-[var(--border)] bg-[var(--bg)] px-3.5 py-2.5 text-sm focus:border-[var(--accent)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/25"
+                maxLength={100}
+                required
               />
             </div>
 
@@ -58,7 +113,11 @@ function SignupPage() {
                 name="lastName"
                 type="text"
                 autoComplete="family-name"
+                value={lastName}
+                onChange={(event) => setLastName(event.target.value)}
                 className="w-full rounded-xl border border-[var(--border)] bg-[var(--bg)] px-3.5 py-2.5 text-sm focus:border-[var(--accent)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/25"
+                maxLength={100}
+                required
               />
             </div>
 
@@ -72,7 +131,11 @@ function SignupPage() {
                 type="email"
                 autoComplete="email"
                 placeholder="you@example.com"
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
                 className="w-full rounded-xl border border-[var(--border)] bg-[var(--bg)] px-3.5 py-2.5 text-sm placeholder:text-[var(--muted)]/70 focus:border-[var(--accent)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/25"
+                maxLength={256}
+                required
               />
             </div>
 
@@ -87,7 +150,12 @@ function SignupPage() {
                   type={showPassword ? 'text' : 'password'}
                   autoComplete="new-password"
                   placeholder="Create a secure password"
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
                   className="w-full rounded-xl border border-[var(--border)] bg-[var(--bg)] px-3.5 py-2.5 pr-11 text-sm placeholder:text-[var(--muted)]/70 focus:border-[var(--accent)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/25"
+                  minLength={8}
+                  maxLength={100}
+                  required
                 />
                 <button
                   type="button"
@@ -114,13 +182,15 @@ function SignupPage() {
 
             <button
               type="submit"
+                disabled={isSubmitting}
               className="sm:col-span-2 w-full rounded-xl border border-[var(--accent)] bg-[var(--accent)] px-4 py-2.5 text-sm font-semibold text-white transition hover:brightness-110 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)]"
             >
-              Create account
+                {isSubmitting ? 'Creating account...' : 'Create account'}
             </button>
 
             <button
               type="button"
+                onClick={handleGoogleSignup}
               className="sm:col-span-2 flex w-full items-center justify-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--surface)] px-4 py-2.5 text-sm font-semibold text-[var(--text)] transition hover:border-[var(--accent)]/45 hover:bg-[var(--panel)]"
             >
               <svg viewBox="0 0 48 48" className="h-4 w-4" aria-hidden="true">
