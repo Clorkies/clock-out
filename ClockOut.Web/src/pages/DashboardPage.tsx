@@ -1,7 +1,6 @@
-import { useMemo, useState, type ChangeEvent, type FormEvent } from 'react'
-import { Link } from 'react-router-dom'
+import { useMemo, useRef, useState, useEffect, type ChangeEvent, type FormEvent } from 'react'
 
-// ─── Font injection (DM Sans + DM Mono) ──────────────────────────────────────
+// ─── Font injection ───────────────────────────────────────────────────────────
 if (!document.getElementById('dashboard-fonts')) {
   const link = document.createElement('link')
   link.id = 'dashboard-fonts'
@@ -12,6 +11,7 @@ if (!document.getElementById('dashboard-fonts')) {
 }
 
 const REQUIRED_HOURS = 300
+const TASK_PREVIEW_CHAR_LIMIT = 120
 
 type LogEntry = {
   id: string
@@ -108,31 +108,99 @@ function validateForm(form: LogForm) {
 }
 
 const inputCls =
-  'w-full rounded-md border border-[var(--border)] bg-[var(--bg)] px-3 py-2 text-sm transition ' +
+  'w-full rounded-lg border border-[var(--border)] bg-[var(--bg)] px-3 py-2 text-sm transition ' +
   'focus:border-[var(--accent)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/20 ' +
   'placeholder:text-[var(--muted)]/40'
 
+// ─── OJT Target Modal ─────────────────────────────────────────────────────────
+function OjtTargetModal({
+  current,
+  onSave,
+  onClose,
+}: {
+  current: number
+  onSave: (h: number) => void
+  onClose: () => void
+}) {
+  const [val, setVal] = useState(String(current))
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
+      onClick={onClose}
+    >
+      <div
+        className="relative w-full max-w-sm overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6 shadow-2xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="absolute inset-x-0 top-0 h-[2px] bg-[var(--accent)]" />
+        <h3 className="mb-1 text-base font-semibold">Adjust OJT Target</h3>
+        <p className="mb-4 text-xs text-[var(--muted)]">Set your total required OJT hours.</p>
+        <input
+          type="number"
+          min={1}
+          max={10000}
+          value={val}
+          onChange={(e) => setVal(e.target.value)}
+          className={inputCls}
+        />
+        <div className="mt-4 flex gap-2">
+          <button
+            onClick={() => {
+              const n = Number(val)
+              if (n > 0) onSave(n)
+            }}
+            className="flex-1 rounded-lg bg-[var(--accent)] py-2 text-xs font-semibold text-white transition hover:brightness-110"
+          >
+            Save
+          </button>
+          <button
+            onClick={onClose}
+            className="flex-1 rounded-lg border border-[var(--border)] py-2 text-xs font-semibold text-[var(--text)] transition hover:border-[var(--accent)]/40"
+          >
+            Cancel
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function DashboardPage() {
+  const [requiredHours, setRequiredHours] = useState(REQUIRED_HOURS)
   const [logs, setLogs] = useState<LogEntry[]>(seededLogs)
   const [form, setForm] = useState<LogForm>({ ...initialForm, date: getTodayDateInputValue() })
   const [formErrors, setFormErrors] = useState<FormErrors>({})
   const [editingId, setEditingId] = useState<string | null>(null)
+  const [profileOpen, setProfileOpen] = useState(false)
+  const [ojtModalOpen, setOjtModalOpen] = useState(false)
+  const [expandedTaskDescriptions, setExpandedTaskDescriptions] = useState<Record<string, boolean>>({})
+  const profileRef = useRef<HTMLDivElement>(null)
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    function handler(e: MouseEvent) {
+      if (profileRef.current && !profileRef.current.contains(e.target as Node)) {
+        setProfileOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [])
 
   const orderedLogs = useMemo(() => sortLogsNewestFirst(logs), [logs])
   const totalHoursLogged = useMemo(() => logs.reduce((t, e) => t + e.hoursRendered, 0), [logs])
-  const remainingHours = Math.max(0, REQUIRED_HOURS - totalHoursLogged)
-  const percentCompleteRaw = REQUIRED_HOURS > 0 ? (totalHoursLogged / REQUIRED_HOURS) * 100 : 0
+  const remainingHours = Math.max(0, requiredHours - totalHoursLogged)
+  const percentCompleteRaw = requiredHours > 0 ? (totalHoursLogged / requiredHours) * 100 : 0
   const percentComplete = Math.min(100, percentCompleteRaw)
-
-  const pageDateLabel = useMemo(
-    () =>
-      new Date().toLocaleDateString(undefined, {
-        weekday: 'long',
-        month: 'long',
-        day: 'numeric',
-      }),
-    [],
-  )
+  const recentHoursSeries = useMemo(() => {
+    const series = orderedLogs
+      .slice(0, 7)
+      .reverse()
+      .map((entry) => entry.hoursRendered)
+    while (series.length < 7) series.unshift(0)
+    return series
+  }, [orderedLogs])
+  const recentHoursPeak = useMemo(() => Math.max(8, ...recentHoursSeries), [recentHoursSeries])
 
   const clearForm = () => {
     setForm({ ...initialForm, date: getTodayDateInputValue() })
@@ -191,349 +259,449 @@ function DashboardPage() {
 
   const deleteEntry = (id: string) => {
     setLogs((c) => c.filter((e) => e.id !== id))
+    setExpandedTaskDescriptions((current) => {
+      if (!current[id]) return current
+      const next = { ...current }
+      delete next[id]
+      return next
+    })
     if (editingId === id) clearForm()
   }
 
   return (
     <div
-      className="relative min-h-screen overflow-x-hidden bg-[var(--bg)] text-[var(--text)]"
+      className="relative min-h-screen overflow-x-hidden bg-[var(--bg)] text-[var(--text)] pb-20"
       style={{ fontFamily: '"DM Sans", system-ui, sans-serif' }}
     >
-      {/* ── Ambient glow ── */}
-      <div className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div className="absolute left-[5%] top-[-6rem] h-[22rem] w-[28rem] rounded-full bg-[var(--accent-glow)] opacity-70 blur-[140px]" />
-        <div className="absolute bottom-[-8rem] right-[6%] h-[20rem] w-[26rem] rounded-full bg-[var(--accent-glow-strong)] opacity-60 blur-[130px]" />
+      {/* ── Single subtle ambient glow at bottom center ── */}
+      <div className="pointer-events-none fixed inset-0 overflow-hidden">
+        <div
+          className="absolute bottom-[-10rem] left-1/2 h-[30rem] w-[50rem] -translate-x-1/2 rounded-full opacity-30 blur-[160px]"
+          style={{ background: 'var(--accent-glow)' }}
+        />
       </div>
 
-      <div className="relative mx-auto max-w-7xl px-4 py-6 md:px-8 md:py-8">
+      {ojtModalOpen && (
+        <OjtTargetModal
+          current={requiredHours}
+          onSave={(h) => { setRequiredHours(h); setOjtModalOpen(false) }}
+          onClose={() => setOjtModalOpen(false)}
+        />
+      )}
+
+      <div className="relative mx-auto max-w-7xl px-4 py-8 md:px-8">
 
         {/* ════════════════════════════════
-            HEADER — contained but slim
+            HEADER — Free floating elements
         ════════════════════════════════ */}
-        <header className="relative mb-6 overflow-hidden rounded-lg border border-[var(--border)] bg-[var(--surface)]/90 px-4 py-3 shadow-sm backdrop-blur-sm">
-          {/* Hairline accent top bar */}
-          <div className="absolute inset-x-0 top-0 h-[2px] bg-[var(--accent)]" />
-
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <Link
-              to="/"
-              className="flex items-center gap-3 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)]"
-            >
-              <div className="grid h-8 w-8 place-items-center rounded-md bg-[var(--accent)] text-[11px] font-bold tracking-wider text-white shadow-sm">
+        <header className="relative mb-10 flex items-center justify-between">
+            {/* Nav Bar Pill */}
+            <div className="flex items-center gap-3 rounded-2xl border border-[var(--border)] bg-[var(--surface)]/90 px-5 py-2.5 shadow-sm backdrop-blur-md">
+              <div className="grid h-8 w-8 place-items-center rounded-lg bg-[var(--accent)] text-[11px] font-bold tracking-wider text-white shadow-sm">
                 CO
               </div>
-              <div className="leading-tight">
-                <p className="text-sm font-semibold tracking-tight">ClockOut</p>
-                <p className="text-[11px] text-[var(--muted)]">OJT Tracker · Dashboard</p>
-              </div>
-            </Link>
+              <p className="text-sm font-bold tracking-tight">ClockOut</p>
+            </div>
 
-            <div className="flex flex-wrap items-center gap-2.5">
-              <span className="hidden rounded-full border border-[var(--border)] bg-[var(--panel)] px-3 py-1 text-[11px] text-[var(--muted)] sm:inline-block">
-                {pageDateLabel}
-              </span>
+            {/* User profile dropdown */}
+            <div className="relative z-50" ref={profileRef}>
               <button
                 type="button"
-                onClick={() =>
-                  document.getElementById('log-form')?.scrollIntoView({
-                    behavior: 'smooth',
-                    block: 'start',
-                  })
-                }
-                className="rounded-md bg-[var(--accent)] px-3.5 py-1.5 text-xs font-semibold text-white shadow-sm transition hover:brightness-110 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)]"
+                onClick={() => setProfileOpen((p) => !p)}
+                className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] transition hover:bg-[var(--panel)] shadow-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)]"
+                aria-label="User menu"
               >
-                + Add log
+                {/* Person icon */}
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                  <circle cx="12" cy="7" r="4" />
+                </svg>
               </button>
-            </div>
-          </div>
-        </header>
 
-        <main className="space-y-4">
-
-          {/* ════════════════════════════════
-              STATS — differentiated hierarchy
-          ════════════════════════════════ */}
-          <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-
-            {/* PRIMARY stat — accent left border, larger numeral */}
-            <article className="relative overflow-hidden rounded-lg border border-[var(--accent)]/35 bg-[var(--surface)] p-4 shadow-sm">
-              <div className="absolute inset-y-0 left-0 w-[3px] bg-[var(--accent)]" />
-              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--accent)]">
-                Total hours
-              </p>
-              <p className="mt-2 leading-none">
-                <span
-                  className="text-[2.6rem] font-bold tabular-nums"
-                  style={{ fontFamily: '"DM Mono", monospace' }}
-                >
-                  {formatHours(totalHoursLogged)}
-                </span>
-                <span className="ml-1 text-lg font-medium text-[var(--muted)]">h</span>
-              </p>
-            </article>
-
-            {/* SECONDARY stats */}
-            {[
-              { label: 'Remaining', value: formatHours(remainingHours), unit: 'h' },
-              { label: 'Completion', value: percentCompleteRaw.toFixed(1), unit: '%' },
-              { label: 'Entries', value: String(logs.length), unit: '' },
-            ].map(({ label, value, unit }) => (
-              <article
-                key={label}
-                className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-4 shadow-sm"
-              >
-                <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">
-                  {label}
-                </p>
-                <p className="mt-2 leading-none">
-                  <span
-                    className="text-3xl font-bold tabular-nums"
-                    style={{ fontFamily: '"DM Mono", monospace' }}
-                  >
-                    {value}
-                  </span>
-                  {unit && (
-                    <span className="ml-0.5 text-base font-medium text-[var(--muted)]">{unit}</span>
-                  )}
-                </p>
-              </article>
-            ))}
-          </section>
-
-          {/* ════════════════════════════════
-              PROGRESS — single-row banner
-          ════════════════════════════════ */}
-          <section className="rounded-lg border border-[var(--border)] bg-[var(--surface)] px-5 py-4 shadow-sm">
-            <div className="mb-2.5 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-              <div className="flex items-baseline gap-2">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--accent)]">
-                  Progress to 300 hours
-                </p>
-                <p className="hidden text-[11px] text-[var(--muted)] sm:block">
-                  · Keep adding logs to reach your OJT target.
-                </p>
-              </div>
-              <p
-                className="text-xs font-semibold tabular-nums text-[var(--text)]"
-                style={{ fontFamily: '"DM Mono", monospace' }}
-              >
-                {formatHours(totalHoursLogged)}h &nbsp;/&nbsp; {REQUIRED_HOURS}h
-              </p>
-            </div>
-            <div className="h-1.5 w-full overflow-hidden rounded-full bg-[var(--track)]">
-              <div
-                className="h-full rounded-full bg-[var(--accent)] transition-all duration-500"
-                style={{ width: `${percentComplete}%` }}
-              />
-            </div>
-          </section>
-
-          {/* ════════════════════════════════
-              FORM + TABLE
-          ════════════════════════════════ */}
-          <section className="grid gap-4 lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.35fr)]">
-
-            {/* ── Form panel ── */}
-            <article
-              id="log-form"
-              className="relative overflow-hidden rounded-lg border border-[var(--border)] bg-[var(--surface)] p-5 shadow-sm"
-            >
-              {/* Top accent stripe */}
-              <div className="absolute inset-x-0 top-0 h-[2px] bg-[var(--accent)]" />
-
-              <div className="mb-4">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--accent)]">
-                  {editingId ? 'Edit log entry' : 'Quick log entry'}
-                </p>
-                <h2 className="mt-1 text-base font-semibold">
-                  {editingId ? 'Update your entry' : 'Add today\u2019s work log'}
-                </h2>
-              </div>
-
-              <form onSubmit={handleSubmit} className="space-y-3.5">
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <div>
-                    <label
-                      htmlFor="date"
-                      className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--muted)]"
-                    >
-                      Date
-                    </label>
-                    <input
-                      id="date"
-                      name="date"
-                      type="date"
-                      value={form.date}
-                      onChange={handleFieldChange('date')}
-                      className={inputCls}
-                    />
-                    {formErrors.date && (
-                      <p className="mt-1 text-[11px] text-rose-500">{formErrors.date}</p>
-                    )}
+              {profileOpen && (
+                <div className="absolute right-0 top-full mt-3 w-56 overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--surface)] shadow-2xl backdrop-blur-md">
+                  <div className="border-b border-[var(--border)] px-4 py-3 bg-[var(--panel)]/30">
+                    <p className="text-xs font-semibold">User Profile</p>
                   </div>
-                  <div>
-                    <label
-                      htmlFor="hoursRendered"
-                      className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--muted)]"
-                    >
-                      Hours rendered
-                    </label>
-                    <input
-                      id="hoursRendered"
-                      name="hoursRendered"
-                      type="number"
-                      min="0.1"
-                      max="24"
-                      step="0.1"
-                      placeholder="8"
-                      value={form.hoursRendered}
-                      onChange={handleFieldChange('hoursRendered')}
-                      className={inputCls}
-                    />
-                    {formErrors.hoursRendered && (
-                      <p className="mt-1 text-[11px] text-rose-500">{formErrors.hoursRendered}</p>
-                    )}
-                  </div>
-                </div>
-
-                <div>
-                  <label
-                    htmlFor="taskDescription"
-                    className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--muted)]"
-                  >
-                    Task description
-                  </label>
-                  <textarea
-                    id="taskDescription"
-                    name="taskDescription"
-                    rows={4}
-                    placeholder="What did you work on today?"
-                    value={form.taskDescription}
-                    onChange={handleFieldChange('taskDescription')}
-                    className={`${inputCls} resize-y`}
-                  />
-                  {formErrors.taskDescription && (
-                    <p className="mt-1 text-[11px] text-rose-500">{formErrors.taskDescription}</p>
-                  )}
-                </div>
-
-                <div>
-                  <label
-                    htmlFor="supervisorName"
-                    className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--muted)]"
-                  >
-                    Supervisor name
-                  </label>
-                  <input
-                    id="supervisorName"
-                    name="supervisorName"
-                    type="text"
-                    placeholder="e.g. Ms. Garcia"
-                    value={form.supervisorName}
-                    onChange={handleFieldChange('supervisorName')}
-                    className={inputCls}
-                  />
-                  {formErrors.supervisorName && (
-                    <p className="mt-1 text-[11px] text-rose-500">{formErrors.supervisorName}</p>
-                  )}
-                </div>
-
-                <div className="flex flex-wrap items-center gap-2 pt-1">
                   <button
-                    type="submit"
-                    className="rounded-md bg-[var(--accent)] px-4 py-2 text-xs font-semibold text-white shadow-sm transition hover:brightness-110 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)]"
+                    type="button"
+                    onClick={() => { setOjtModalOpen(true); setProfileOpen(false) }}
+                    className="flex w-full items-center gap-3 px-4 py-3 text-xs font-medium text-[var(--text)] transition hover:bg-[var(--panel)]"
                   >
-                    {editingId ? 'Save changes' : 'Add entry'}
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>
+                    Adjust OJT Target Hour
                   </button>
                   <button
                     type="button"
-                    onClick={clearForm}
-                    className="rounded-md border border-[var(--border)] bg-[var(--panel)] px-4 py-2 text-xs font-semibold text-[var(--text)] transition hover:border-[var(--accent)]/40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)]"
+                    onClick={() => { setProfileOpen(false); /* Handle logout logic here */ }}
+                    className="flex w-full items-center gap-3 px-4 py-3 text-xs font-medium text-rose-500 transition hover:bg-rose-500/10"
                   >
-                    {editingId ? 'Cancel edit' : 'Reset'}
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                    Logout
                   </button>
                 </div>
-              </form>
-            </article>
+              )}
+            </div>
+        </header>
 
-            {/* ── Log table panel ── */}
-            <article className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-5 shadow-sm">
-              <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-                <div>
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--accent)]">
-                    Recent logs
-                  </p>
-                  <h2 className="mt-1 text-base font-semibold">Your entry history</h2>
+        <main className="space-y-6">
+
+          {/* ════════════════════════════════
+              UNIFIED STATS PANEL
+          ════════════════════════════════ */}
+          <section className="overflow-hidden rounded-3xl border border-[var(--border)] bg-[var(--surface)] p-5 shadow-sm md:p-6">
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--muted)]">
+                  Progress overview
+                </p>
+                <h2 className="mt-1 text-base font-semibold">OJT tracker snapshot</h2>
+              </div>
+              <span className="rounded-full border border-[var(--border)] bg-[var(--panel)] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--muted)]">
+                {logs.length} {logs.length === 1 ? 'entry' : 'entries'}
+              </span>
+            </div>
+
+            <div className="grid gap-4 xl:grid-cols-12">
+              <div className="space-y-4 xl:col-span-8">
+                <div className="grid gap-3 sm:grid-cols-3">
+                  <article className="rounded-2xl border border-[var(--border)] bg-[var(--panel)]/45 p-4">
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--muted)]">
+                      Total hours
+                    </p>
+                    <p
+                      className="mt-2 text-3xl font-bold tabular-nums leading-none"
+                      style={{ fontFamily: '"DM Mono", monospace' }}
+                    >
+                      {formatHours(totalHoursLogged)}
+                      <span className="ml-1 text-base font-medium text-[var(--muted)]">h</span>
+                    </p>
+                  </article>
+                  <article className="rounded-2xl border border-[var(--border)] bg-[var(--panel)]/45 p-4">
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--muted)]">
+                      Remaining
+                    </p>
+                    <p
+                      className="mt-2 text-3xl font-bold tabular-nums leading-none"
+                      style={{ fontFamily: '"DM Mono", monospace' }}
+                    >
+                      {formatHours(remainingHours)}
+                      <span className="ml-1 text-base font-medium text-[var(--muted)]">h</span>
+                    </p>
+                  </article>
+                  <article className="rounded-2xl border border-[var(--border)] bg-[var(--panel)]/45 p-4">
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--muted)]">
+                      Completion
+                    </p>
+                    <p
+                      className="mt-2 text-3xl font-bold tabular-nums leading-none"
+                      style={{ fontFamily: '"DM Mono", monospace' }}
+                    >
+                      {percentCompleteRaw.toFixed(1)}
+                      <span className="ml-1 text-base font-medium text-[var(--muted)]">%</span>
+                    </p>
+                  </article>
                 </div>
-                <span className="rounded-full bg-[var(--panel)] px-2.5 py-0.5 text-[10px] font-medium text-[var(--muted)]">
-                  Newest first
-                </span>
+
+                <article className="rounded-2xl border border-[var(--border)] bg-[var(--panel)]/35 p-4">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <p className="text-xs font-semibold text-[var(--text)]">
+                      {formatHours(totalHoursLogged)}h of {formatHours(requiredHours)}h target
+                    </p>
+                    <p className="text-[11px] font-medium text-[var(--muted)]">Last 7 logged days</p>
+                  </div>
+                  <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-[var(--track)]">
+                    <div
+                      className="h-full rounded-full bg-[var(--accent)] transition-all duration-500"
+                      style={{ width: `${percentComplete}%` }}
+                    />
+                  </div>
+                  <div className="mt-4 flex items-end gap-2">
+                    {recentHoursSeries.map((hours, idx) => (
+                      <div key={`hour-bar-${idx}`} className="flex min-w-0 flex-1 flex-col items-center gap-1">
+                        <div className="flex h-20 w-full items-end">
+                          <div
+                            className="w-full rounded-md bg-[var(--accent)]/75 transition-all"
+                            style={{
+                              height: `${hours === 0 ? 12 : Math.max(12, (hours / recentHoursPeak) * 100)}%`,
+                            }}
+                          />
+                        </div>
+                        <span className="text-[10px] text-[var(--muted)]">{hours === 0 ? '-' : formatHours(hours)}</span>
+                      </div>
+                    ))}
+                  </div>
+                </article>
               </div>
 
-              {orderedLogs.length === 0 ? (
-                <div className="rounded-md border border-dashed border-[var(--border)] bg-[var(--panel)]/40 px-6 py-8 text-center">
-                  <p className="text-sm font-semibold">No logs yet</p>
-                  <p className="mt-1 text-xs text-[var(--muted)]">
-                    Add your first entry to start tracking your OJT progress.
+              <article className="rounded-2xl border border-[var(--border)] bg-[var(--panel)]/40 p-4 xl:col-span-4">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--muted)]">
+                  Completion ring
+                </p>
+                <div className="mt-3 flex flex-col items-center gap-4 rounded-xl border border-[var(--border)] bg-[var(--surface)]/75 p-4">
+                  <div
+                    className="grid h-28 w-28 place-items-center rounded-full"
+                    style={{
+                      background: `conic-gradient(var(--accent) ${percentComplete}%, var(--track) ${percentComplete}% 100%)`,
+                    }}
+                  >
+                    <div className="grid h-20 w-20 place-items-center rounded-full bg-[var(--surface)] text-sm font-semibold tabular-nums">
+                      {percentCompleteRaw.toFixed(0)}%
+                    </div>
+                  </div>
+                  <div className="grid w-full grid-cols-3 gap-2 border-t border-[var(--border)] pt-3 text-center text-[11px]">
+                    <div>
+                      <p className="text-[var(--muted)]">Target</p>
+                      <p className="mt-1 font-semibold text-[var(--text)] tabular-nums">{formatHours(requiredHours)}h</p>
+                    </div>
+                    <div>
+                      <p className="text-[var(--muted)]">Logged</p>
+                      <p className="mt-1 font-semibold text-[var(--text)] tabular-nums">{formatHours(totalHoursLogged)}h</p>
+                    </div>
+                    <div>
+                      <p className="text-[var(--muted)]">Left</p>
+                      <p className="mt-1 font-semibold text-[var(--text)] tabular-nums">{formatHours(remainingHours)}h</p>
+                    </div>
+                  </div>
+                </div>
+              </article>
+            </div>
+          </section>
+
+          {/* ════════════════════════════════
+              FORM + TABLE — Adjusted heights to prevent empty space
+          ════════════════════════════════ */}
+          <section className="grid gap-6 lg:grid-cols-12 items-start">
+
+            {/* ── Log Entry Form (h-fit ensures it doesn't stretch down) ── */}
+            <article
+              id="log-form"
+              className="lg:col-span-4 rounded-2xl border border-[var(--border)] bg-[var(--surface)] shadow-sm h-fit"
+            >
+              <div className="p-6">
+                <div className="mb-5">
+                  <h2 className="text-lg font-semibold tracking-tight">
+                    {editingId ? 'Edit Log Entry' : 'Log Entry'}
+                  </h2>
+                  <p className="text-xs text-[var(--muted)] mt-1">
+                    {editingId ? 'Update your current selection.' : 'Record your daily tasks.'}
                   </p>
                 </div>
-              ) : (
-                <div className="overflow-x-auto">
-                  <table className="min-w-full text-left text-sm">
-                    <thead>
-                      <tr className="border-b border-[var(--border)] text-[10px] uppercase tracking-[0.12em] text-[var(--muted)]">
-                        <th className="pb-2.5 pr-4 font-semibold">Date</th>
-                        <th className="pb-2.5 pr-4 font-semibold">Hours</th>
-                        <th className="pb-2.5 pr-4 font-semibold">Task</th>
-                        <th className="pb-2.5 pr-4 font-semibold">Supervisor</th>
-                        <th className="pb-2.5 text-right font-semibold">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-[var(--border)]">
-                      {orderedLogs.map((entry) => (
-                        <tr
-                          key={entry.id}
-                          className="group transition-colors hover:bg-[var(--panel)]/50"
-                        >
-                          <td className="whitespace-nowrap py-2.5 pr-4 text-xs text-[var(--muted)]">
-                            {formatDateLabel(entry.date)}
-                          </td>
-                          <td
-                            className="whitespace-nowrap py-2.5 pr-4 text-xs font-medium tabular-nums text-[var(--text)]"
-                            style={{ fontFamily: '"DM Mono", monospace' }}
-                          >
-                            {formatHours(entry.hoursRendered)}h
-                          </td>
-                          <td className="max-w-[18rem] py-2.5 pr-4 text-xs leading-relaxed text-[var(--text)]">
-                            {entry.taskDescription}
-                          </td>
-                          <td className="whitespace-nowrap py-2.5 pr-4 text-xs text-[var(--text)]">
-                            {entry.supervisorName}
-                          </td>
-                          <td className="py-2.5">
-                            <div className="flex justify-end gap-1.5 opacity-50 transition-opacity group-hover:opacity-100">
-                              <button
-                                type="button"
-                                onClick={() => startEditing(entry)}
-                                className="rounded border border-[var(--border)] bg-[var(--panel)] px-2.5 py-1 text-[11px] font-semibold text-[var(--text)] transition hover:border-[var(--accent)]/50 hover:text-[var(--accent)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)]"
-                              >
-                                Edit
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => deleteEntry(entry.id)}
-                                className="rounded border border-rose-400/40 bg-rose-500/10 px-2.5 py-1 text-[11px] font-semibold text-rose-500 transition hover:bg-rose-500/20 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rose-500"
-                              >
-                                Delete
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+
+                <form onSubmit={handleSubmit} className="space-y-4">
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div>
+                      <label
+                        htmlFor="date"
+                        className="mb-1.5 block text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--muted)]"
+                      >
+                        Date
+                      </label>
+                      <input
+                        id="date"
+                        name="date"
+                        type="date"
+                        value={form.date}
+                        onChange={handleFieldChange('date')}
+                        className={inputCls}
+                      />
+                      {formErrors.date && (
+                        <p className="mt-1 text-[11px] text-rose-500">{formErrors.date}</p>
+                      )}
+                    </div>
+                    <div>
+                      <label
+                        htmlFor="hoursRendered"
+                        className="mb-1.5 block text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--muted)]"
+                      >
+                        Hours
+                      </label>
+                      <input
+                        id="hoursRendered"
+                        name="hoursRendered"
+                        type="number"
+                        min="0.1"
+                        max="24"
+                        step="0.1"
+                        placeholder="8"
+                        value={form.hoursRendered}
+                        onChange={handleFieldChange('hoursRendered')}
+                        className={inputCls}
+                      />
+                      {formErrors.hoursRendered && (
+                        <p className="mt-1 text-[11px] text-rose-500">{formErrors.hoursRendered}</p>
+                      )}
+                    </div>
+                  </div>
+
+                  <div>
+                    <label
+                      htmlFor="taskDescription"
+                      className="mb-1.5 block text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--muted)]"
+                    >
+                      Task description
+                    </label>
+                    <textarea
+                      id="taskDescription"
+                      name="taskDescription"
+                      rows={4}
+                      placeholder="What did you work on today?"
+                      value={form.taskDescription}
+                      onChange={handleFieldChange('taskDescription')}
+                      className={`${inputCls} resize-y`}
+                    />
+                    {formErrors.taskDescription && (
+                      <p className="mt-1 text-[11px] text-rose-500">{formErrors.taskDescription}</p>
+                    )}
+                  </div>
+
+                  <div>
+                    <label
+                      htmlFor="supervisorName"
+                      className="mb-1.5 block text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--muted)]"
+                    >
+                      Supervisor name
+                    </label>
+                    <input
+                      id="supervisorName"
+                      name="supervisorName"
+                      type="text"
+                      placeholder="e.g. Ms. Garcia"
+                      value={form.supervisorName}
+                      onChange={handleFieldChange('supervisorName')}
+                      className={inputCls}
+                    />
+                    {formErrors.supervisorName && (
+                      <p className="mt-1 text-[11px] text-rose-500">{formErrors.supervisorName}</p>
+                    )}
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-2 pt-2">
+                    <button
+                      type="submit"
+                      className="w-full sm:w-auto rounded-lg bg-[var(--accent)] px-5 py-2.5 text-xs font-semibold text-white shadow-sm transition hover:brightness-110 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)]"
+                    >
+                      {editingId ? 'Save changes' : 'Add entry'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={clearForm}
+                      className="w-full sm:w-auto rounded-lg border border-[var(--border)] bg-[var(--panel)] px-5 py-2.5 text-xs font-semibold text-[var(--text)] transition hover:border-[var(--accent)]/40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)]"
+                    >
+                      {editingId ? 'Cancel edit' : 'Reset'}
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </article>
+
+            {/* ── Log table panel (h-fit & bounded overflow for independent scrolling) ── */}
+            <article className="lg:col-span-8 overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--surface)] shadow-sm h-fit">
+              <div className="border-b border-[var(--border)] px-6 py-5 bg-[var(--surface)] z-20 relative">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div>
+                    <h2 className="text-lg font-semibold tracking-tight">Recent Logs</h2>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="rounded-full bg-[var(--panel)] border border-[var(--border)] px-3 py-1 text-[10px] font-semibold tracking-wide text-[var(--muted)] uppercase">
+                      {logs.length} {logs.length === 1 ? 'entry' : 'entries'}
+                    </span>
+                  </div>
                 </div>
-              )}
+              </div>
+
+              {/* Setting max height prevents the container from stretching infinitely downward */}
+              <div className="max-h-[500px] overflow-y-auto">
+                {orderedLogs.length === 0 ? (
+                  <div className="rounded-xl border border-dashed border-[var(--border)] bg-[var(--panel)]/40 mx-6 my-6 px-6 py-10 text-center">
+                    <p className="text-sm font-semibold">No logs yet</p>
+                    <p className="mt-1 text-xs text-[var(--muted)]">
+                      Add your first entry to start tracking your OJT progress.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full text-left text-sm">
+                      <thead className="sticky top-0 z-10 bg-[var(--surface)]/95 backdrop-blur-sm">
+                        <tr className="border-b border-[var(--border)] text-[10px] uppercase tracking-[0.12em] text-[var(--muted)]">
+                          <th className="px-6 pb-3 pt-4 font-semibold">Date</th>
+                          <th className="pb-3 pr-4 pt-4 font-semibold">Hours</th>
+                          <th className="pb-3 pr-4 pt-4 font-semibold">Task</th>
+                          <th className="pb-3 pr-4 pt-4 font-semibold">Supervisor</th>
+                          <th className="pb-3 pr-6 pt-4 text-right font-semibold">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-[var(--border)]">
+                        {orderedLogs.map((entry) => {
+                          const isTaskExpanded = Boolean(expandedTaskDescriptions[entry.id])
+                          const taskText = entry.taskDescription.trim()
+                          const canExpandTask = taskText.length > TASK_PREVIEW_CHAR_LIMIT
+                          const taskPreview = canExpandTask
+                            ? `${taskText.slice(0, TASK_PREVIEW_CHAR_LIMIT).trimEnd()}...`
+                            : taskText
+
+                          return (
+                          <tr
+                            key={entry.id}
+                            className={`group transition-colors hover:bg-[var(--panel)]/50 ${isTaskExpanded ? 'h-auto' : 'h-[84px]'}`}
+                          >
+                            <td className="whitespace-nowrap py-3.5 pl-6 pr-4 text-xs text-[var(--muted)]">
+                              {formatDateLabel(entry.date)}
+                            </td>
+                            <td
+                              className="whitespace-nowrap py-3.5 pr-4 text-xs font-medium tabular-nums text-[var(--text)]"
+                              style={{ fontFamily: '"DM Mono", monospace' }}
+                            >
+                              {formatHours(entry.hoursRendered)}h
+                            </td>
+                            <td className="max-w-[16rem] py-3.5 pr-4 align-top text-xs leading-relaxed text-[var(--text)]">
+                              <p className="break-words">
+                                {isTaskExpanded ? taskText : taskPreview}
+                              </p>
+                              {canExpandTask && (
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    setExpandedTaskDescriptions((current) => ({
+                                      ...current,
+                                      [entry.id]: !current[entry.id],
+                                    }))
+                                  }
+                                  className="mt-1 inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--accent)] hover:brightness-110 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)]"
+                                >
+                                  <span>{isTaskExpanded ? 'Show less' : 'Show more'}</span>
+                                  <span aria-hidden="true">{isTaskExpanded ? '▲' : '▼'}</span>
+                                </button>
+                              )}
+                            </td>
+                            <td className="whitespace-nowrap py-3.5 pr-4 text-xs text-[var(--text)]">
+                              {entry.supervisorName}
+                            </td>
+                            <td className="py-3.5 pr-6">
+                              <div className="flex justify-end gap-2 opacity-50 transition-opacity group-hover:opacity-100">
+                                <button
+                                  type="button"
+                                  onClick={() => startEditing(entry)}
+                                  className="rounded-lg border border-[var(--border)] bg-[var(--panel)] px-3 py-1.5 text-[11px] font-semibold text-[var(--text)] transition hover:border-[var(--accent)]/50 hover:text-[var(--accent)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)]"
+                                >
+                                  Edit
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => deleteEntry(entry.id)}
+                                  className="rounded-lg border border-rose-400/40 bg-rose-500/10 px-3 py-1.5 text-[11px] font-semibold text-rose-500 transition hover:bg-rose-500/20 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rose-500"
+                                >
+                                  Delete
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        )})}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
             </article>
 
           </section>
