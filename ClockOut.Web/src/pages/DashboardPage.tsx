@@ -1,6 +1,8 @@
 import { useMemo, useRef, useState, useEffect, type ChangeEvent, type FormEvent } from 'react'
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
+import ThemeToggle from '../components/ThemeToggle'
+import type { ThemeMode, ResolvedTheme } from '../hooks/useTheme'
 
 // ─── Font injection ───────────────────────────────────────────────────────────
 if (!document.getElementById('dashboard-fonts')) {
@@ -32,6 +34,16 @@ type LogForm = {
 }
 
 type FormErrors = Partial<Record<keyof LogForm, string>>
+type DashboardPageProps = {
+  theme: ThemeMode
+  resolvedTheme: ResolvedTheme
+  setTheme: (theme: ThemeMode) => void
+}
+type DashboardUserIdentity = {
+  firstName: string
+  lastName: string
+  email: string
+}
 
 const seededLogs: LogEntry[] = [
   {
@@ -92,6 +104,57 @@ function getTodayDateInputValue() {
   const mm = String(today.getMonth() + 1).padStart(2, '0')
   const dd = String(today.getDate()).padStart(2, '0')
   return `${yyyy}-${mm}-${dd}`
+}
+
+function getUserIdentityFromStorage(): DashboardUserIdentity {
+  const fallback: DashboardUserIdentity = {
+    firstName: 'Guest',
+    lastName: 'User',
+    email: 'Not provided',
+  }
+
+  if (typeof window === 'undefined') return fallback
+
+  const candidateKeys = ['clockout_user', 'clockoutUser', 'authUser', 'user', 'profile']
+
+  for (const key of candidateKeys) {
+    const raw = window.localStorage.getItem(key)
+    if (!raw) continue
+
+    try {
+      const parsed = JSON.parse(raw) as Record<string, unknown>
+      const source =
+        typeof parsed.user === 'object' && parsed.user !== null
+          ? (parsed.user as Record<string, unknown>)
+          : parsed
+
+      const firstName =
+        typeof source.firstName === 'string'
+          ? source.firstName
+          : typeof source.firstname === 'string'
+            ? source.firstname
+            : ''
+      const lastName =
+        typeof source.lastName === 'string'
+          ? source.lastName
+          : typeof source.lastname === 'string'
+            ? source.lastname
+            : ''
+      const email = typeof source.email === 'string' ? source.email : ''
+
+      if (firstName || lastName || email) {
+        return {
+          firstName: firstName || fallback.firstName,
+          lastName: lastName || fallback.lastName,
+          email: email || fallback.email,
+        }
+      }
+    } catch {
+      continue
+    }
+  }
+
+  return fallback
 }
 
 function validateForm(form: LogForm) {
@@ -167,7 +230,7 @@ function OjtTargetModal({
   )
 }
 
-function DashboardPage() {
+function DashboardPage({ theme, resolvedTheme, setTheme }: DashboardPageProps) {
   const [requiredHours, setRequiredHours] = useState(REQUIRED_HOURS)
   const [logs, setLogs] = useState<LogEntry[]>(seededLogs)
   const [form, setForm] = useState<LogForm>({ ...initialForm, date: getTodayDateInputValue() })
@@ -203,6 +266,7 @@ function DashboardPage() {
     return series
   }, [orderedLogs])
   const recentHoursPeak = useMemo(() => Math.max(8, ...recentHoursSeries), [recentHoursSeries])
+  const userIdentity = useMemo(() => getUserIdentityFromStorage(), [])
 
   const clearForm = () => {
     setForm({ ...initialForm, date: getTodayDateInputValue() })
@@ -288,9 +352,11 @@ function DashboardPage() {
     doc.setFontSize(10)
     safeSetText(100, 94, 123)
     doc.text(`Generated: ${formatDateTime}`, margin, 66)
+    doc.text(`Name: ${userIdentity.firstName} ${userIdentity.lastName}`, margin, 82)
+    doc.text(`Email: ${userIdentity.email}`, margin, 98)
 
     // Progress overview panel
-    const panelY = 86
+    const panelY = 118
     const panelW = pageWidth - margin * 2
     const panelH = 238
     safeSetFill(240, 238, 248)
@@ -378,15 +444,17 @@ function DashboardPage() {
     doc.setFontSize(10)
     safeSetText(86, 80, 106)
     const insights = [
+      `User: ${userIdentity.firstName} ${userIdentity.lastName} (${userIdentity.email})`,
       `Average hours per entry: ${formatHours(averageHours)}h`,
       `Highest single log: ${topEntry ? `${formatHours(topEntry.hoursRendered)}h on ${formatDateLabel(topEntry.date)}` : 'N/A'}`,
       `Top supervisor by total logged hours: ${topSupervisor ? `${topSupervisor[0]} (${formatHours(topSupervisor[1])}h)` : 'N/A'}`,
       `Current completion: ${percentCompleteRaw.toFixed(1)}% (${formatHours(remainingHours)}h remaining)`,
     ]
     insights.forEach((line, idx) => doc.text(`- ${line}`, margin, insightsY + 20 + idx * 16))
+    const insightsBottomY = insightsY + 20 + (insights.length - 1) * 16
 
     // Logs table section
-    const tableStartY = insightsY + 96
+    const tableStartY = insightsBottomY + 32
     doc.setFont('helvetica', 'bold')
     doc.setFontSize(12)
     safeSetText(45, 39, 66)
@@ -478,45 +546,56 @@ function DashboardPage() {
                 Download PDF
               </button>
 
-              {/* User profile dropdown */}
-              <div className="relative z-50" ref={profileRef}>
-              <button
-                type="button"
-                onClick={() => setProfileOpen((p) => !p)}
-                className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] transition hover:bg-[var(--panel)] shadow-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)]"
-                aria-label="User menu"
-              >
-                {/* Person icon */}
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-                  <circle cx="12" cy="7" r="4" />
-                </svg>
-              </button>
+              <div className="h-6 w-px bg-[var(--border)]/85" aria-hidden="true" />
 
-              {profileOpen && (
-                <div className="absolute right-0 top-full mt-3 w-56 overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--surface)] shadow-2xl backdrop-blur-md">
-                  <div className="border-b border-[var(--border)] px-4 py-3 bg-[var(--panel)]/30">
-                    <p className="text-xs font-semibold">User Profile</p>
-                  </div>
+              <div className="flex items-center gap-2">
+                <ThemeToggle
+                  theme={theme}
+                  resolvedTheme={resolvedTheme}
+                  setTheme={setTheme}
+                />
+
+                {/* User profile dropdown */}
+                <div className="relative z-50" ref={profileRef}>
                   <button
                     type="button"
-                    onClick={() => { setOjtModalOpen(true); setProfileOpen(false) }}
-                    className="flex w-full items-center gap-3 px-4 py-3 text-xs font-medium text-[var(--text)] transition hover:bg-[var(--panel)]"
+                    onClick={() => setProfileOpen((p) => !p)}
+                    className="inline-flex items-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs font-semibold text-[var(--text)] transition hover:bg-[var(--panel)] shadow-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)]"
+                    aria-haspopup="menu"
+                    aria-expanded={profileOpen}
                   >
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>
-                    Adjust OJT Target Hour
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                      <circle cx="12" cy="7" r="4" />
+                    </svg>
+                    <span>Profile</span>
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => { setProfileOpen(false); /* Handle logout logic here */ }}
-                    className="flex w-full items-center gap-3 px-4 py-3 text-xs font-medium text-rose-500 transition hover:bg-rose-500/10"
-                  >
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-                    Logout
-                  </button>
+
+                  {profileOpen && (
+                    <div className="absolute right-0 top-full mt-3 w-56 overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--surface)] shadow-2xl backdrop-blur-md">
+                      <div className="border-b border-[var(--border)] px-4 py-3 bg-[var(--panel)]/30">
+                        <p className="text-xs font-semibold">User Profile</p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => { setOjtModalOpen(true); setProfileOpen(false) }}
+                        className="flex w-full items-center gap-3 px-4 py-3 text-xs font-medium text-[var(--text)] transition hover:bg-[var(--panel)]"
+                      >
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>
+                        Adjust OJT Target Hour
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => { setProfileOpen(false); /* Handle logout logic here */ }}
+                        className="flex w-full items-center gap-3 px-4 py-3 text-xs font-medium text-rose-500 transition hover:bg-rose-500/10"
+                      >
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                        Logout
+                      </button>
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
+              </div>
             </div>
         </header>
 

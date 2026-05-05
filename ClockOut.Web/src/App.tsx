@@ -22,7 +22,16 @@ function App() {
       />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/signup" element={<SignupPage />} />
-      <Route path="/dashboard" element={<DashboardPage />} />
+      <Route
+        path="/dashboard"
+        element={
+          <DashboardPage
+            theme={theme}
+            resolvedTheme={resolvedTheme}
+            setTheme={setTheme}
+          />
+        }
+      />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   )
